@@ -5,11 +5,10 @@
 --
 --
 --
-----
+--
 
 New World: Ideas
 
-- Make it more lore focused.
 - Have unique interactions between creatures and civilizations.
 - A dynamic weather system that affects gameplay and strategy.
 - Implement a morality system that influences the player's choices and the world's response.
@@ -20,8 +19,9 @@ New World: Ideas
 - implement a dynamic economy that responds to player actions and world events.
 - implement a seemless multiplayer experience where players can interact with each other and the world in meaningful ways.
 - implement a system where there is a seemless transition between different regions of the world, allowing for exploration and discovery.
+- have events that are influenced by the player's actions and choices, creating a sense of immersion and agency in the world and its inhabitants mainly derived from a RNG/Dice roll of 20
 
-- Overall, Idea DND in the console 
+-Overall, Idea DND in the console  
 
 
 
