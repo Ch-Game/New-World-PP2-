@@ -1,5 +1,6 @@
 using System;
 using NewWorldPP2.Systems;
+using NewWorldPP2.Entities;
 
 namespace NewWorldPP2.Systems
 {
