@@ -12,8 +12,18 @@ namespace NewWorldPP2.Core
             var pc = new PlayerCharacter();
             Console.Clear();
             Console.WriteLine("--- Create New Character ---");
-            Console.Write("Enter character name: ");
-            pc.Name = Console.ReadLine()?.Trim() ?? "Unnamed";
+            // Require a non-empty name
+            while (true)
+            {
+                Console.Write("Enter character name: ");
+                var input = Console.ReadLine()?.Trim() ?? string.Empty;
+                if (!string.IsNullOrEmpty(input))
+                {
+                    pc.Name = input;
+                    break;
+                }
+                Console.WriteLine("Name is required and cannot be blank. Please enter a name.");
+            }
 
             pc.Race = ChooseRace();
 
@@ -53,8 +63,17 @@ namespace NewWorldPP2.Core
                 switch (key)
                 {
                     case "1":
-                        Console.Write("New name: ");
-                        pc.Name = Console.ReadLine()?.Trim() ?? pc.Name;
+                        Console.Write($"New name (current: {pc.Name}): ");
+                        var newName = Console.ReadLine()?.Trim() ?? string.Empty;
+                        if (string.IsNullOrEmpty(newName))
+                        {
+                            Console.WriteLine("Name cannot be blank. Keeping previous name. Press Enter to continue...");
+                            Console.ReadLine();
+                        }
+                        else
+                        {
+                            pc.Name = newName;
+                        }
                         break;
                     case "2":
                         pc.Race = ChooseRace();

@@ -23,6 +23,9 @@ namespace NewWorldPP2.Core
         {
             try
             {
+                if (pc == null) return false;
+                // Do not allow saving a character without a name
+                if (string.IsNullOrWhiteSpace(pc.Name)) return false;
                 if (string.IsNullOrWhiteSpace(username)) return false;
                 Directory.CreateDirectory(SaveFolder);
                 var file = Path.Combine(SaveFolder, Sanitize(username) + ".json");
