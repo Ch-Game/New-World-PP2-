@@ -19,9 +19,13 @@ New World: Ideas
 - implement a dynamic economy that responds to player actions and world events.
 - implement a seemless multiplayer experience where players can interact with each other and the world in meaningful ways.
 - implement a system where there is a seemless transition between different regions of the world, allowing for exploration and discovery.
-- have events that are influenced by the player's actions and choices, creating a sense of immersion and agency in the world and its inhabitants mainly derived from a RNG/Dice roll of 20
+- have events that are influenced by the player's actions and choices, creating a sense of immersion and agency in the world and its inhabitants mainly derived from a RNG/Dice roll from 1 though 20 20 being the best and 1 being the worst onlu used for battle.
 
 -Overall, Idea DND in the console  
+
+Quick breakdown
+
+interaction between creatures and civilizations, dynamic weather system, morality system, rich backstory for each civilization, long-term consequences of player actions, magic system tied, character customization, dynamic economy, seamless multiplayer experience, seamless transition between regions, events influenced by player actions and choices.
 
 
 
