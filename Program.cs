@@ -33,6 +33,7 @@ namespace NewWorldPP2
                         {
                             Console.WriteLine("No character yet. Press Enter to continue...");
                             Console.ReadLine();
+                            Console.Clear();
                         }
                         else
                         {
@@ -44,12 +45,14 @@ namespace NewWorldPP2
                         {
                             Console.WriteLine("No character yet. Press Enter to continue...");
                             Console.ReadLine();
+                            Console.Clear();
                         }
                         else
                         {
                             Console.WriteLine(player.GetFullDescription());
                             Console.WriteLine("Press Enter to continue...");
                             Console.ReadLine();
+                            Console.Clear();
                         }
                         break;
                     case "4":
@@ -57,6 +60,7 @@ namespace NewWorldPP2
                         {
                             Console.WriteLine("No character to save. Press Enter to continue...");
                             Console.ReadLine();
+                            Console.Clear();
                         }
                         else
                         {
@@ -75,6 +79,7 @@ namespace NewWorldPP2
                             }
                             Console.WriteLine("Press Enter to continue...");
                             Console.ReadLine();
+                            Console.Clear();
                         }
                         break;
                     case "5":
@@ -87,20 +92,23 @@ namespace NewWorldPP2
                         {
                             Console.WriteLine("Failed to load save (incorrect user/password or missing save). Press Enter...");
                             Console.ReadLine();
+                            Console.Clear();
                         }
                         else
                         {
                             player = loaded;
                             Console.WriteLine("Save loaded. Press Enter to continue...");
                             Console.ReadLine();
+                            Console.Clear();
                         }
                         break;
                     case "6":
                         return;
-                    default:
-                        Console.WriteLine("Invalid option. Press Enter to continue...");
-                        Console.ReadLine();
-                        break;
+                        default:
+                            Console.WriteLine("Invalid option. Press Enter to continue...");
+                            Console.ReadLine();
+                            Console.Clear();
+                            break;
                 }
             }
         }

@@ -12,17 +12,19 @@ namespace NewWorldPP2.Core
             var pc = new PlayerCharacter();
             Console.Clear();
             Console.WriteLine("--- Create New Character ---");
-            // Require a non-empty name
+            // Require a valid name (non-empty, length and character checks)
             while (true)
             {
                 Console.Write("Enter character name: ");
                 var input = Console.ReadLine()?.Trim() ?? string.Empty;
-                if (!string.IsNullOrEmpty(input))
+                if (IsValidName(input, out var err))
                 {
                     pc.Name = input;
                     break;
                 }
-                Console.WriteLine("Name is required and cannot be blank. Please enter a name.");
+                Console.WriteLine(err + " Press Enter to try again...");
+                Console.ReadLine();
+                Console.Clear();
             }
 
             pc.Race = ChooseRace();
@@ -40,6 +42,7 @@ namespace NewWorldPP2.Core
             Console.WriteLine(pc.GetFullDescription());
             Console.WriteLine("Press Enter to continue...");
             Console.ReadLine();
+            Console.Clear();
 
             return pc;
         }
@@ -63,16 +66,19 @@ namespace NewWorldPP2.Core
                 switch (key)
                 {
                     case "1":
-                        Console.Write($"New name (current: {pc.Name}): ");
-                        var newName = Console.ReadLine()?.Trim() ?? string.Empty;
-                        if (string.IsNullOrEmpty(newName))
+                        // Re-prompt until a valid name is entered
+                        while (true)
                         {
-                            Console.WriteLine("Name cannot be blank. Keeping previous name. Press Enter to continue...");
+                            Console.Write($"New name (current: {pc.Name}): ");
+                            var newName = Console.ReadLine()?.Trim() ?? string.Empty;
+                            if (IsValidName(newName, out var nameErr))
+                            {
+                                pc.Name = newName;
+                                break;
+                            }
+                            Console.WriteLine(nameErr + " Press Enter to try again...");
                             Console.ReadLine();
-                        }
-                        else
-                        {
-                            pc.Name = newName;
+                            Console.Clear();
                         }
                         break;
                     case "2":
@@ -89,10 +95,11 @@ namespace NewWorldPP2.Core
                         break;
                     case "5":
                         return;
-                    default:
-                        Console.WriteLine("Invalid option. Press Enter to continue...");
-                        Console.ReadLine();
-                        break;
+                        default:
+                            Console.WriteLine("Invalid option. Press Enter to continue...");
+                            Console.ReadLine();
+                            Console.Clear();
+                            break;
                 }
             }
         }
@@ -151,6 +158,7 @@ namespace NewWorldPP2.Core
                     Console.WriteLine($"You still have {remaining} points remaining. Distribute all points before continuing.");
                     Console.WriteLine("Press Enter to continue and reassign remaining points...");
                     Console.ReadLine();
+                    Console.Clear();
                     continue;
                 }
 
@@ -158,6 +166,7 @@ namespace NewWorldPP2.Core
                 {
                     Console.WriteLine("You allocated too many points. Start over. Press Enter...");
                     Console.ReadLine();
+                    Console.Clear();
                     // reset
                     s.Strength = s.Dexterity = s.Constitution = s.Intelligence = s.Wisdom = s.Charisma = 1;
                     remaining = totalPoints;
@@ -250,6 +259,31 @@ namespace NewWorldPP2.Core
                 result += line;
             }
             return result;
+        }
+
+        // Validate character names: non-empty, reasonable length, and allowed characters
+        private static bool IsValidName(string name, out string error)
+        {
+            error = string.Empty;
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                error = "Name is required and cannot be blank.";
+                return false;
+            }
+            if (name.Length < 2 || name.Length > 20)
+            {
+                error = "Name must be between 2 and 20 characters.";
+                return false;
+            }
+            foreach (var c in name)
+            {
+                if (!(char.IsLetterOrDigit(c) || c == ' ' || c == '-' || c == '\''))
+                {
+                    error = "Name contains invalid characters. Use letters, numbers, spaces, hyphens or apostrophes.";
+                    return false;
+                }
+            }
+            return true;
         }
     }
 }
