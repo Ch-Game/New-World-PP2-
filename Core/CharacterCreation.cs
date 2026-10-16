@@ -1,5 +1,6 @@
 using System;
 using NewWorldPP2.Entities;
+using NewWorldPP2.Game.Systems;
 
 namespace NewWorldPP2.Core
 {
@@ -29,6 +30,11 @@ namespace NewWorldPP2.Core
 
             pc.Race = ChooseRace();
 
+            // Allow the player to choose a class and starting gear via the CharacterCustomization system
+            pc.Class = CharacterCustomization.ChooseClass();
+            pc.StartingWeapon = CharacterCustomization.ChooseWeapon(pc.Class);
+            pc.StartingArmor = CharacterCustomization.ChooseArmor(pc.Class);
+
             Console.WriteLine($"You have {PointsToDistribute} points to distribute among six stats.");
             pc.BaseStats = DistributePoints(PointsToDistribute);
 
@@ -57,7 +63,10 @@ namespace NewWorldPP2.Core
                 Console.WriteLine("2) Change Race");
                 Console.WriteLine("3) Reassign Stats");
                 Console.WriteLine("4) Edit Backstory");
-                Console.WriteLine("5) Back");
+                Console.WriteLine("5) Change Class");
+                Console.WriteLine("6) Change Starting Weapon");
+                Console.WriteLine("7) Change Starting Armor");
+                Console.WriteLine("8) Back");
                 Console.WriteLine();
                 Console.WriteLine(pc.GetShortDescription());
                 Console.Write("Choose option: ");
@@ -94,6 +103,15 @@ namespace NewWorldPP2.Core
                         pc.Backstory = ReadMultiline();
                         break;
                     case "5":
+                        pc.Class = CharacterCustomization.ChooseClass();
+                        break;
+                    case "6":
+                        pc.StartingWeapon = CharacterCustomization.ChooseWeapon(pc.Class);
+                        break;
+                    case "7":
+                        pc.StartingArmor = CharacterCustomization.ChooseArmor(pc.Class);
+                        break;
+                    case "8":
                         return;
                         default:
                             Console.WriteLine("Invalid option. Press Enter to continue...");

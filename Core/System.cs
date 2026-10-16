@@ -4,34 +4,43 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using NewWorldPP2.Entities;
 
 namespace NewWorldPP2.Core
 {
+    public static class Dice
+    {
+        private static readonly Random _rng = new();
+
+        // Roll an n-sided dice (default d20)
+        public static int Roll(int sides = 20)
+        {
+            if (sides < 2) return 1;
+            return _rng.Next(1, sides + 1);
+        }
+    }
+
+    // Saves and related helpers (keeps file-per-user JSON with SHA-256 hashing)
     public static class SaveSystem
     {
         private const string SaveFolder = "Saves";
 
-        private class SaveData
+        private sealed class SaveData
         {
             public string Username { get; set; } = string.Empty;
             public string PasswordHash { get; set; } = string.Empty;
-            public PlayerCharacter? Character { get; set; }
+            public NewWorldPP2.Entities.PlayerCharacter? Character { get; set; }
         }
 
-        public static bool SaveCharacter(PlayerCharacter pc, string username, string password)
+        public static bool SaveCharacter(NewWorldPP2.Entities.PlayerCharacter pc, string username, string password)
         {
+            if (pc == null) return false;
+            if (string.IsNullOrWhiteSpace(pc.Name) || string.IsNullOrWhiteSpace(username)) return false;
+
             try
             {
-                if (pc == null) return false;
-                // Do not allow saving a character without a name
-                if (string.IsNullOrWhiteSpace(pc.Name)) return false;
-                if (string.IsNullOrWhiteSpace(username)) return false;
                 Directory.CreateDirectory(SaveFolder);
                 var file = Path.Combine(SaveFolder, Sanitize(username) + ".json");
-
-                // Do not allow duplicate save names
-                if (File.Exists(file)) return false;
+                if (File.Exists(file)) return false; // do not overwrite
 
                 var data = new SaveData
                 {
@@ -42,9 +51,7 @@ namespace NewWorldPP2.Core
 
                 var opts = new JsonSerializerOptions { WriteIndented = true };
                 opts.Converters.Add(new JsonStringEnumConverter());
-
-                var json = JsonSerializer.Serialize(data, opts);
-                File.WriteAllText(file, json, Encoding.UTF8);
+                File.WriteAllText(file, JsonSerializer.Serialize(data, opts), Encoding.UTF8);
                 return true;
             }
             catch
@@ -60,37 +67,24 @@ namespace NewWorldPP2.Core
             return File.Exists(file);
         }
 
-        private static string Sanitize(string username)
+        public static NewWorldPP2.Entities.PlayerCharacter? LoadCharacter(string username, string password)
         {
-            if (string.IsNullOrWhiteSpace(username)) return string.Empty;
-            var invalid = Path.GetInvalidFileNameChars();
-            var sb = new StringBuilder(username.Length);
-            foreach (var c in username)
-            {
-                if (Array.IndexOf(invalid, c) >= 0) sb.Append('_'); else sb.Append(c);
-            }
-            return sb.ToString().ToLowerInvariant();
-        }
+            if (string.IsNullOrWhiteSpace(username)) return null;
 
-        public static PlayerCharacter? LoadCharacter(string username, string password)
-        {
             try
             {
-                if (string.IsNullOrWhiteSpace(username)) return null;
-                var file = Path.Combine(SaveFolder, username.ToLowerInvariant() + ".json");
+                var file = Path.Combine(SaveFolder, Sanitize(username) + ".json");
                 if (!File.Exists(file)) return null;
 
-                var json = File.ReadAllText(file, Encoding.UTF8);
                 var opts = new JsonSerializerOptions();
                 opts.Converters.Add(new JsonStringEnumConverter());
+                var json = File.ReadAllText(file, Encoding.UTF8);
                 var data = JsonSerializer.Deserialize<SaveData>(json, opts);
                 if (data == null) return null;
 
-                // Validate credentials, handling potential nulls from deserialization
                 var expected = ComputeHash(data.Username ?? string.Empty, password);
                 if (!string.Equals(expected, data.PasswordHash ?? string.Empty, StringComparison.OrdinalIgnoreCase)) return null;
 
-                // Ensure derived stats are recomputed after loading and avoid returning a possible null
                 var character = data.Character;
                 if (character == null) return null;
 
@@ -103,12 +97,23 @@ namespace NewWorldPP2.Core
             }
         }
 
+        private static string Sanitize(string username)
+        {
+            if (string.IsNullOrWhiteSpace(username)) return string.Empty;
+            var invalid = Path.GetInvalidFileNameChars();
+            var sb = new StringBuilder(username.Length);
+            foreach (var c in username)
+            {
+                sb.Append(Array.IndexOf(invalid, c) >= 0 ? '_' : c);
+            }
+            return sb.ToString().ToLowerInvariant();
+        }
+
         private static string ComputeHash(string username, string password)
         {
             using var sha = SHA256.Create();
             var combined = (username ?? string.Empty) + ":" + (password ?? string.Empty);
-            var bytes = Encoding.UTF8.GetBytes(combined);
-            var hash = sha.ComputeHash(bytes);
+            var hash = sha.ComputeHash(Encoding.UTF8.GetBytes(combined));
             var sb = new StringBuilder(hash.Length * 2);
             foreach (var b in hash) sb.Append(b.ToString("x2"));
             return sb.ToString();
