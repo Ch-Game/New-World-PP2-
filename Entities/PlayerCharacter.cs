@@ -21,6 +21,15 @@ namespace NewWorldPP2.Entities
         public int Morality { get; set; } = 0;
         public int Gold { get; set; } = 50;
         public List<Item> Inventory { get; set; } = new();
+        public HashSet<string> OpenedChestIds { get; set; } = new();
+
+        public bool TryOpenChest(string chestId)
+        {
+            if (string.IsNullOrWhiteSpace(chestId)) return false;
+
+            OpenedChestIds ??= new HashSet<string>();
+            return OpenedChestIds.Add(chestId);
+        }
 
         public void RecalculateDerivedStats()
         {

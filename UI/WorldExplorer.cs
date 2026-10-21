@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using NewWorldPP2.Entities;
 using NewWorldPP2.Services;
 using NewWorldPP2.Services.World;
@@ -11,6 +12,7 @@ namespace NewWorldPP2.UI
         {
             var map = WorldMap.CreateDefault();
             var state = new WorldState();
+            var quests = new List<Quest>();
             string? lastLocationId = null;
 
             while (true)
@@ -34,13 +36,15 @@ namespace NewWorldPP2.UI
                 Console.WriteLine("2) Interact with a person or object");
                 Console.WriteLine("3) Use location services");
                 Console.WriteLine("4) View character");
-                Console.WriteLine("5) Leave the fantasy world");
+                Console.WriteLine("5) Search for an encounter");
+                Console.WriteLine("6) View quests");
+                Console.WriteLine("7) Leave the fantasy world");
                 Console.Write("Choose an action: ");
 
                 switch (Console.ReadLine())
                 {
                     case "1":
-                        Travel(map, state, location);
+                        Travel(map, state, location, player, quests);
                         break;
                     case "2":
                         InteractWithObject(player, location);
@@ -54,6 +58,14 @@ namespace NewWorldPP2.UI
                         Pause();
                         break;
                     case "5":
+                        HandleEncounter(EncounterSystem.CreateLocationEncounter(location), player, quests);
+                        Pause();
+                        break;
+                    case "6":
+                        ShowQuests(quests);
+                        Pause();
+                        break;
+                    case "7":
                         return;
                     default:
                         Console.WriteLine("Invalid choice.");
@@ -77,7 +89,7 @@ namespace NewWorldPP2.UI
             Console.WriteLine(location.Description);
         }
 
-        private static void Travel(WorldMap map, WorldState state, WorldLocation currentLocation)
+        private static void Travel(WorldMap map, WorldState state, WorldLocation currentLocation, PlayerCharacter player, List<Quest> quests)
         {
             Console.Clear();
             Console.WriteLine($"Travel from {currentLocation.Name}");
@@ -108,7 +120,98 @@ namespace NewWorldPP2.UI
             state.CurrentLocationId = currentLocation.Connections[choice - 1];
             var destinationLocation = map.Locations[state.CurrentLocationId];
             Console.WriteLine($"You travel to {destinationLocation.Name}.");
+            if (Dice.Roll(2) == 1)
+            {
+                Console.WriteLine("Something approaches on the road...");
+                HandleEncounter(EncounterSystem.CreateRandomEncounter(destinationLocation), player, quests);
+            }
+
             Pause();
+        }
+
+        private static void HandleEncounter(Encounter encounter, PlayerCharacter player, List<Quest> quests)
+        {
+            Console.Clear();
+            Console.WriteLine($"=== Encounter: {encounter.Name} ===");
+            Console.WriteLine(encounter.Description);
+            Console.WriteLine();
+
+            switch (encounter.Type)
+            {
+                case EncounterType.Combat:
+                    if (encounter.Enemy != null && CombatSystem.Fight(player, encounter.Enemy))
+                    {
+                        RecordQuestProgress(quests);
+                    }
+                    break;
+                case EncounterType.Npc:
+                    if (encounter.Quest != null)
+                    {
+                        quests.Add(encounter.Quest);
+                        Console.WriteLine($"Quest accepted: {encounter.Quest.Title}");
+                        Console.WriteLine(encounter.Quest.Description);
+                    }
+                    break;
+                case EncounterType.Treasure:
+                    player.Gold += encounter.GoldReward;
+                    Console.WriteLine($"You find {encounter.GoldReward} gold.");
+                    AddReward(player, encounter.ItemReward);
+                    RecordQuestProgress(quests);
+                    break;
+                case EncounterType.Trap:
+                    var damage = Dice.Roll(6);
+                    player.Health = Math.Max(1, player.Health - damage);
+                    Console.WriteLine($"The trap injures you for {damage} damage.");
+                    break;
+            }
+
+            CompleteQuests(quests, player);
+        }
+
+        private static void RecordQuestProgress(List<Quest> quests)
+        {
+            foreach (var quest in quests)
+            {
+                quest.RecordProgress();
+            }
+        }
+
+        private static void CompleteQuests(List<Quest> quests, PlayerCharacter player)
+        {
+            foreach (var quest in quests)
+            {
+                if (quest.Status != QuestStatus.Completed || quest.GoldReward == 0) continue;
+
+                player.Gold += quest.GoldReward;
+                AddReward(player, quest.ItemReward);
+                Console.WriteLine($"Quest complete: {quest.Title}. Reward: {quest.GoldReward} gold.");
+                quest.GoldReward = 0;
+            }
+        }
+
+        private static void AddReward(PlayerCharacter player, Item? item)
+        {
+            if (item == null) return;
+
+            player.Inventory.Add(item);
+            Console.WriteLine($"You acquire: {item.Name}.");
+        }
+
+        private static void ShowQuests(List<Quest> quests)
+        {
+            Console.Clear();
+            Console.WriteLine("=== Quest Log ===");
+            if (quests.Count == 0)
+            {
+                Console.WriteLine("You have no active or completed quests.");
+                return;
+            }
+
+            foreach (var quest in quests)
+            {
+                Console.WriteLine($"- {quest.Title} [{quest.Status}] ({quest.CompletedEncounters}/{quest.RequiredEncounters})");
+                Console.WriteLine($"  {quest.Description}");
+            }
         }
 
         private static void ShowArrival(WorldLocation location)
@@ -181,8 +284,15 @@ namespace NewWorldPP2.UI
                     UseSpecificService(player, interaction);
                     break;
                 case WorldInteractionType.Chest:
-                    player.Gold += 10;
-                    Console.WriteLine("You find 10 gold inside.");
+                    if (player.TryOpenChest(interaction.Id))
+                    {
+                        player.Gold += 10;
+                        Console.WriteLine("You find 10 gold inside.");
+                    }
+                    else
+                    {
+                        Console.WriteLine("The chest is already open.");
+                    }
                     break;
                 case WorldInteractionType.Door:
                     Console.WriteLine("The way opens. You prepare yourself for what lies beyond.");

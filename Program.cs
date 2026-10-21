@@ -21,8 +21,9 @@ namespace NewWorldPP2
                 Console.WriteLine("3) View Character");
                 Console.WriteLine("4) Save Character");
                 Console.WriteLine("5) Load Character");
-                Console.WriteLine("6) Start Fantasy World");
-                Console.WriteLine("7) Exit");
+                Console.WriteLine("6) Delete Save");
+                Console.WriteLine("7) Start Fantasy World");
+                Console.WriteLine("8) Exit");
                 Console.Write("Choose an option: ");
                 var key = Console.ReadLine() ?? string.Empty;
 
@@ -106,6 +107,28 @@ namespace NewWorldPP2
                         }
                         break;
                     case "6":
+                        Console.Write("Enter save username to delete: ");
+                        var deleteUser = Console.ReadLine()?.Trim() ?? string.Empty;
+                        Console.Write("Enter password: ");
+                        var deletePass = ReadPassword();
+                        Console.Write("Type DELETE to confirm: ");
+                        var confirmation = Console.ReadLine();
+                        if (!string.Equals(confirmation, "DELETE", StringComparison.Ordinal))
+                        {
+                            Console.WriteLine("Save deletion cancelled.");
+                        }
+                        else
+                        {
+                            var deleted = SaveSystem.DeleteSave(deleteUser, deletePass);
+                            Console.WriteLine(deleted
+                                ? "Save deleted successfully."
+                                : "Save deletion failed (incorrect username/password or missing save).");
+                        }
+                        Console.WriteLine("Press Enter to continue...");
+                        Console.ReadLine();
+                        Console.Clear();
+                        break;
+                    case "7":
                         if (player == null)
                         {
                             Console.WriteLine("Create or load a character before entering the fantasy world.");
@@ -118,7 +141,7 @@ namespace NewWorldPP2
                             WorldExplorer.Enter(player);
                         }
                         break;
-                    case "7":
+                    case "8":
                         return;
                         default:
                             Console.WriteLine("Invalid option. Press Enter to continue...");

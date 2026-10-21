@@ -85,6 +85,33 @@ namespace NewWorldPP2.Persistence
             }
         }
 
+        public static bool DeleteSave(string username, string password)
+        {
+            if (string.IsNullOrWhiteSpace(username)) return false;
+
+            try
+            {
+                var file = Path.Combine(SaveFolder, Sanitize(username) + ".json");
+                if (!File.Exists(file)) return false;
+
+                var opts = new JsonSerializerOptions();
+                opts.Converters.Add(new JsonStringEnumConverter());
+                var json = File.ReadAllText(file, Encoding.UTF8);
+                var data = JsonSerializer.Deserialize<SaveData>(json, opts);
+                if (data == null) return false;
+
+                var expected = ComputeHash(data.Username ?? string.Empty, password);
+                if (!string.Equals(expected, data.PasswordHash ?? string.Empty, StringComparison.OrdinalIgnoreCase)) return false;
+
+                File.Delete(file);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         private static string Sanitize(string username)
         {
             if (string.IsNullOrWhiteSpace(username)) return string.Empty;
