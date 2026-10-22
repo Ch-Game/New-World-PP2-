@@ -39,10 +39,11 @@ namespace NewWorldPP2.UI
             pc.BaseStats = DistributePoints(PointsToDistribute);
 
             ApplyRaceModifiers(pc);
-
+            Console.Clear();
             Console.WriteLine("Write a short backstory (press Enter twice to finish):");
             pc.Backstory = ReadMultiline();
 
+            Console.Clear();
             Console.WriteLine();
             Console.WriteLine("Character created:");
             Console.WriteLine(pc.GetFullDescription());
