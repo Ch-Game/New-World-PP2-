@@ -37,8 +37,9 @@ namespace NewWorldPP2.UI
                 Console.WriteLine("3) Use location services");
                 Console.WriteLine("4) View character");
                 Console.WriteLine("5) Search for an encounter");
-                Console.WriteLine("6) View quests");
-                Console.WriteLine("7) Leave the fantasy world");
+                Console.WriteLine("6) Challenge a local NPC");
+                Console.WriteLine("7) View quests");
+                Console.WriteLine("8) Leave the fantasy world");
                 Console.Write("Choose an action: ");
 
                 switch (Console.ReadLine())
@@ -62,10 +63,14 @@ namespace NewWorldPP2.UI
                         Pause();
                         break;
                     case "6":
-                        ShowQuests(quests);
+                        HandleEncounter(EncounterSystem.CreateNpcEncounter(location), player, quests);
                         Pause();
                         break;
                     case "7":
+                        ShowQuests(quests);
+                        Pause();
+                        break;
+                    case "8":
                         return;
                     default:
                         Console.WriteLine("Invalid choice.");
@@ -145,11 +150,33 @@ namespace NewWorldPP2.UI
                     }
                     break;
                 case EncounterType.Npc:
-                    if (encounter.Quest != null)
+                    Console.WriteLine("1) Accept the NPC's request");
+                    Console.WriteLine("2) Challenge the NPC to a fight");
+                    Console.WriteLine("0) Walk away");
+                    Console.Write("Choose an option: ");
+
+                    switch (Console.ReadLine())
                     {
-                        quests.Add(encounter.Quest);
-                        Console.WriteLine($"Quest accepted: {encounter.Quest.Title}");
-                        Console.WriteLine(encounter.Quest.Description);
+                        case "1":
+                            if (encounter.Quest != null)
+                            {
+                                quests.Add(encounter.Quest);
+                                Console.WriteLine($"Quest accepted: {encounter.Quest.Title}");
+                                Console.WriteLine(encounter.Quest.Description);
+                            }
+                            break;
+                        case "2":
+                            if (encounter.Enemy != null && CombatSystem.Fight(player, encounter.Enemy))
+                            {
+                                RecordQuestProgress(quests);
+                            }
+                            break;
+                        case "0":
+                            Console.WriteLine("You leave the NPC alone.");
+                            break;
+                        default:
+                            Console.WriteLine("Invalid encounter choice.");
+                            break;
                     }
                     break;
                 case EncounterType.Treasure:

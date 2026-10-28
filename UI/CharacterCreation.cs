@@ -44,7 +44,6 @@ namespace NewWorldPP2.UI
             pc.Backstory = ReadMultiline();
 
             Console.Clear();
-            Console.WriteLine();
             Console.WriteLine("Character created:");
             Console.WriteLine(pc.GetFullDescription());
             Console.WriteLine("Press Enter to continue...");
@@ -127,6 +126,7 @@ namespace NewWorldPP2.UI
         {
             while (true)
             {
+                Console.Clear();
                 Console.WriteLine("Choose a race:");
                 Console.WriteLine("1) Human (+1 all stats)");
                 Console.WriteLine("2) Elf (+2 Dexterity, -1 Constitution)");

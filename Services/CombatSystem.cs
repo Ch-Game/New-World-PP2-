@@ -13,7 +13,7 @@ namespace NewWorldPP2.Services
 
             while (player.Health > 0 && enemy.Health > 0)
             {
-                Console.WriteLine();
+                Console.Clear();
                 Console.WriteLine($"You: {player.Health}/{player.MaxHealth} HP | {enemy.Name}: {enemy.Health}/{enemy.MaxHealth} HP");
                 Console.WriteLine("1) Attack");
                 Console.WriteLine("2) Use potion");

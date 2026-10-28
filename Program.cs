@@ -53,6 +53,7 @@ namespace NewWorldPP2
                         }
                         else
                         {
+                            Console.Clear();
                             Console.WriteLine(player.GetFullDescription());
                             Console.WriteLine("Press Enter to continue...");
                             Console.ReadLine();

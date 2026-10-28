@@ -66,7 +66,7 @@ namespace NewWorldPP2.Services.World
             };
         }
 
-        private static Encounter CreateNpcEncounter(WorldLocation location, bool roaming)
+        public static Encounter CreateNpcEncounter(WorldLocation location, bool roaming = false)
         {
             var quest = new Quest
             {
@@ -80,6 +80,17 @@ namespace NewWorldPP2.Services.World
                 ItemReward = ItemFactory.CreatePotion(PotionType.Health, ItemRarity.Uncommon)
             };
 
+            var enemy = new Enemy
+            {
+                Name = roaming ? "Roadside Scout" : "Local Duelist",
+                MaxHealth = roaming ? 18 : 22,
+                Health = roaming ? 18 : 22,
+                Attack = roaming ? 5 : 6,
+                Defense = roaming ? 2 : 3,
+                GoldReward = roaming ? 12 : 16,
+                ItemReward = ItemFactory.CreatePotion(PotionType.Health, ItemRarity.Common)
+            };
+
             return new Encounter
             {
                 Id = $"npc-{location.Id}-{Dice.Roll(100000)}",
@@ -88,6 +99,7 @@ namespace NewWorldPP2.Services.World
                     ? "A traveling scout asks whether you can help keep the road safe."
                     : "A local approaches with a problem that needs an adventurer's attention.",
                 Type = EncounterType.Npc,
+                Enemy = enemy,
                 Quest = quest
             };
         }
