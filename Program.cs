@@ -11,10 +11,13 @@ namespace NewWorldPP2
         static void Main(string[] args)
         {
             PlayerCharacter? player = null;
+            string? saveUsername = null;
+            string? savePassword = null;
 
             while (true)
             {
                 Console.Clear();
+                ShowTitleScreen();
                 Console.WriteLine("=== Character Menu ===");
                 Console.WriteLine("1) Create New Character");
                 Console.WriteLine("2) Customize Character");
@@ -31,6 +34,8 @@ namespace NewWorldPP2
                 {
                     case "1":
                         player = CharacterCreation.CreateCharacter();
+                        saveUsername = null;
+                        savePassword = null;
                         break;
                     case "2":
                         if (player == null)
@@ -80,6 +85,11 @@ namespace NewWorldPP2
                             else
                             {
                                 var ok = SaveSystem.SaveCharacter(player, user, pass);
+                                if (ok)
+                                {
+                                    saveUsername = user;
+                                    savePassword = pass;
+                                }
                                 Console.WriteLine(ok ? "Saved successfully." : "Save failed.");
                             }
                             Console.WriteLine("Press Enter to continue...");
@@ -102,6 +112,8 @@ namespace NewWorldPP2
                         else
                         {
                             player = loaded;
+                            saveUsername = loadUser;
+                            savePassword = loadPass;
                             Console.WriteLine("Save loaded. Press Enter to continue...");
                             Console.ReadLine();
                             Console.Clear();
@@ -139,7 +151,24 @@ namespace NewWorldPP2
                         }
                         else
                         {
-                            WorldExplorer.Enter(player);
+                            WorldExplorer.Enter(player, () =>
+                            {
+                                if (saveUsername != null && savePassword != null)
+                                {
+                                    var deleted = SaveSystem.DeleteSave(saveUsername, savePassword);
+                                    Console.WriteLine(deleted
+                                        ? "Your character's save has been permanently deleted."
+                                        : "The character died, but the save could not be deleted.");
+                                }
+                                else
+                                {
+                                    Console.WriteLine("This character had no save file to delete.");
+                                }
+
+                                player = null;
+                                saveUsername = null;
+                                savePassword = null;
+                            });
                         }
                         break;
                     case "8":
@@ -151,6 +180,21 @@ namespace NewWorldPP2
                             break;
                 }
             }
+        }
+
+        private static void ShowTitleScreen()
+        {
+            Console.WriteLine(@"              *        .        *
+         .          /\          .
+                   /^^\
+          /\      /|[]|\      /\
+         /  \    /_|__|_\    /  \
+        /^^^^\      ||      /^^^^\
+       /      \     ||     /      \
+      /________\____||____/________\
+             ~~~ NEW WORLD ~~~
+                  (PP2)
+");
         }
 
         // Minimal password masking for console input

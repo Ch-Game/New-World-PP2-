@@ -8,7 +8,7 @@ namespace NewWorldPP2.UI
 {
     public static class WorldExplorer
     {
-        public static void Enter(PlayerCharacter player)
+        public static void Enter(PlayerCharacter player, Action? onDeath = null)
         {
             var map = WorldMap.CreateDefault();
             var state = new WorldState();
@@ -76,6 +76,15 @@ namespace NewWorldPP2.UI
                         Console.WriteLine("Invalid choice.");
                         Pause();
                         break;
+                }
+
+                if (player.Health <= 0)
+                {
+                    Console.Clear();
+                    Console.WriteLine("Your character has died. This character can never be played again.");
+                    onDeath?.Invoke();
+                    Pause();
+                    return;
                 }
             }
         }
@@ -187,7 +196,7 @@ namespace NewWorldPP2.UI
                     break;
                 case EncounterType.Trap:
                     var damage = Dice.Roll(6);
-                    player.Health = Math.Max(1, player.Health - damage);
+                    player.Health = Math.Max(0, player.Health - damage);
                     Console.WriteLine($"The trap injures you for {damage} damage.");
                     break;
             }

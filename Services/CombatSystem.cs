@@ -10,10 +10,12 @@ namespace NewWorldPP2.Services
             Console.Clear();
             Console.WriteLine($"A fight begins: {enemy.Name}!");
             Console.WriteLine(enemy.Name + " has " + enemy.MaxHealth + " health.");
+            var round = 1;
 
             while (player.Health > 0 && enemy.Health > 0)
             {
                 Console.Clear();
+                Console.WriteLine($"--- Round {round} ---");
                 Console.WriteLine($"You: {player.Health}/{player.MaxHealth} HP | {enemy.Name}: {enemy.Health}/{enemy.MaxHealth} HP");
                 Console.WriteLine("1) Attack");
                 Console.WriteLine("2) Use potion");
@@ -48,6 +50,7 @@ namespace NewWorldPP2.Services
                 if (actionSucceeded && enemy.Health > 0)
                 {
                     EnemyAttack(player, enemy);
+                    round++;
                 }
             }
 
@@ -64,8 +67,7 @@ namespace NewWorldPP2.Services
                 return true;
             }
 
-            Console.WriteLine("You are defeated and barely escape with 1 health.");
-            player.Health = 1;
+            Console.WriteLine("You are defeated.");
             return false;
         }
 
