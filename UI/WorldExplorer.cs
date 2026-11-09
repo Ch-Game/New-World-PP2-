@@ -6,8 +6,10 @@ using NewWorldPP2.Services.World;
 
 namespace NewWorldPP2.UI
 {
+    // Runs the main console loop for navigating and interacting with the world.
     public static class WorldExplorer
     {
+        // Starts world exploration and returns when the player leaves or dies.
         public static void Enter(PlayerCharacter player, Action? onDeath = null)
         {
             var map = WorldMap.CreateDefault();
@@ -33,9 +35,9 @@ namespace NewWorldPP2.UI
                 ShowLocation(player, location);
                 Console.WriteLine();
                 Console.WriteLine("1) Travel");
-                Console.WriteLine("2) Interact with a person or object");
-                Console.WriteLine("3) Use location services");
-                Console.WriteLine("4) View character");
+                Console.WriteLine("2) Interact with a person, object, or location service");
+                Console.WriteLine("3) View character");
+                Console.WriteLine("4) Enter dungeon or gauntlet");
                 Console.WriteLine("5) Search for an encounter");
                 Console.WriteLine("6) Challenge a local NPC");
                 Console.WriteLine("7) View quests");
@@ -48,15 +50,23 @@ namespace NewWorldPP2.UI
                         Travel(map, state, location, player, quests);
                         break;
                     case "2":
-                        InteractWithObject(player, location);
+                        InteractWithObject(player, location, quests);
                         break;
                     case "3":
-                        UseLocationServices(player, location);
-                        break;
-                    case "4":
                         Console.Clear();
                         Console.WriteLine(player.GetFullDescription());
                         Pause();
+                        break;
+                    case "4":
+                        if (location.Type is LocationType.Dungeon or LocationType.Gauntlet)
+                        {
+                            DungeonSystem.Run(player, location);
+                        }
+                        else
+                        {
+                            Console.WriteLine("There is no dungeon or gauntlet at this location.");
+                            Pause();
+                        }
                         break;
                     case "5":
                         HandleEncounter(EncounterSystem.CreateLocationEncounter(location), player, quests);
@@ -89,10 +99,12 @@ namespace NewWorldPP2.UI
             }
         }
 
+        // Displays the current location and the player's basic context.
         private static void ShowLocation(PlayerCharacter player, WorldLocation location)
         {
             Console.WriteLine("=== The Realms of Aetheria ===");
             Console.WriteLine($"Adventurer: {player.Name}");
+            Console.WriteLine($"Level: {player.Level} | XP: {player.Experience}/{player.ExperienceToNextLevel} | Stat points: {player.UnspentStatPoints}");
             Console.WriteLine($"Location: {location.Name} ({location.Type})");
             if (!string.IsNullOrWhiteSpace(location.TownName))
             {
@@ -103,6 +115,7 @@ namespace NewWorldPP2.UI
             Console.WriteLine(location.Description);
         }
 
+        // Moves to a connected location and may trigger a road encounter.
         private static void Travel(WorldMap map, WorldState state, WorldLocation currentLocation, PlayerCharacter player, List<Quest> quests)
         {
             Console.Clear();
@@ -134,7 +147,7 @@ namespace NewWorldPP2.UI
             state.CurrentLocationId = currentLocation.Connections[choice - 1];
             var destinationLocation = map.Locations[state.CurrentLocationId];
             Console.WriteLine($"You travel to {destinationLocation.Name}.");
-            if (Dice.Roll(2) == 1)
+            if (Dice.Roll(100) <= StatCalculator.TravelEncounterChance(player.Stats))
             {
                 Console.WriteLine("Something approaches on the road...");
                 HandleEncounter(EncounterSystem.CreateRandomEncounter(destinationLocation), player, quests);
@@ -143,6 +156,7 @@ namespace NewWorldPP2.UI
             Pause();
         }
 
+        // Resolves the selected encounter and applies its rewards or consequences.
         private static void HandleEncounter(Encounter encounter, PlayerCharacter player, List<Quest> quests)
         {
             Console.Clear();
@@ -169,6 +183,7 @@ namespace NewWorldPP2.UI
                         case "1":
                             if (encounter.Quest != null)
                             {
+                                encounter.Quest.RequiredEncounters = Math.Max(1, encounter.Quest.RequiredEncounters - StatCalculator.SocialBonus(player.Stats));
                                 quests.Add(encounter.Quest);
                                 Console.WriteLine($"Quest accepted: {encounter.Quest.Title}");
                                 Console.WriteLine(encounter.Quest.Description);
@@ -189,13 +204,14 @@ namespace NewWorldPP2.UI
                     }
                     break;
                 case EncounterType.Treasure:
-                    player.Gold += encounter.GoldReward;
-                    Console.WriteLine($"You find {encounter.GoldReward} gold.");
+                    var gold = encounter.GoldReward + StatCalculator.RewardBonus(player.Stats);
+                    player.Gold += gold;
+                    Console.WriteLine($"You find {gold} gold.");
                     AddReward(player, encounter.ItemReward);
                     RecordQuestProgress(quests);
                     break;
                 case EncounterType.Trap:
-                    var damage = Dice.Roll(6);
+                    var damage = Math.Max(0, Dice.Roll(6) - StatCalculator.TrapReduction(player.Stats));
                     player.Health = Math.Max(0, player.Health - damage);
                     Console.WriteLine($"The trap injures you for {damage} damage.");
                     break;
@@ -204,6 +220,7 @@ namespace NewWorldPP2.UI
             CompleteQuests(quests, player);
         }
 
+        // Advances all active quests after a successful encounter.
         private static void RecordQuestProgress(List<Quest> quests)
         {
             foreach (var quest in quests)
@@ -212,19 +229,29 @@ namespace NewWorldPP2.UI
             }
         }
 
+        // Pays rewards for quests that became complete.
         private static void CompleteQuests(List<Quest> quests, PlayerCharacter player)
         {
             foreach (var quest in quests)
             {
-                if (quest.Status != QuestStatus.Completed || quest.GoldReward == 0) continue;
+                if (quest.Status != QuestStatus.Completed || quest.RewardsClaimed) continue;
 
                 player.Gold += quest.GoldReward;
+                var previousLevel = player.Level;
+                player.AddExperience(quest.ExperienceReward);
                 AddReward(player, quest.ItemReward);
-                Console.WriteLine($"Quest complete: {quest.Title}. Reward: {quest.GoldReward} gold.");
+                Console.WriteLine($"Quest complete: {quest.Title}. Reward: {quest.GoldReward} gold and {quest.ExperienceReward} XP.");
+                if (player.Level > previousLevel)
+                {
+                    Console.WriteLine($"Level up! You are now level {player.Level} and gained 3 stat points.");
+                }
                 quest.GoldReward = 0;
+                quest.ExperienceReward = 0;
+                quest.RewardsClaimed = true;
             }
         }
 
+        // Adds an optional item reward and reports it to the player.
         private static void AddReward(PlayerCharacter player, Item? item)
         {
             if (item == null) return;
@@ -233,6 +260,7 @@ namespace NewWorldPP2.UI
             Console.WriteLine($"You acquire: {item.Name}.");
         }
 
+        // Displays current and completed quest progress.
         private static void ShowQuests(List<Quest> quests)
         {
             Console.Clear();
@@ -250,6 +278,7 @@ namespace NewWorldPP2.UI
             }
         }
 
+        // Announces arrival at a new location.
         private static void ShowArrival(WorldLocation location)
         {
             Console.Clear();
@@ -267,7 +296,8 @@ namespace NewWorldPP2.UI
             Pause();
         }
 
-        private static void InteractWithObject(PlayerCharacter player, WorldLocation location)
+        // Displays and resolves the location's interactable objects.
+        private static void InteractWithObject(PlayerCharacter player, WorldLocation location, List<Quest> quests)
         {
             Console.Clear();
             Console.WriteLine($"People and objects at {location.Name}");
@@ -279,10 +309,12 @@ namespace NewWorldPP2.UI
                 Console.WriteLine($"   {listedInteraction.Description}");
             }
 
+            var serviceChoice = location.Interactions.Count + 1;
+            Console.WriteLine($"{serviceChoice}) Use location services");
             Console.WriteLine("0) Back");
             Console.Write("Choose an interaction: ");
             var input = Console.ReadLine();
-            if (!int.TryParse(input, out var choice) || choice < 0 || choice > location.Interactions.Count)
+            if (!int.TryParse(input, out var choice) || choice < 0 || choice > serviceChoice)
             {
                 Console.WriteLine("Invalid interaction.");
                 Pause();
@@ -294,16 +326,23 @@ namespace NewWorldPP2.UI
                 return;
             }
 
+            if (choice == serviceChoice)
+            {
+                UseLocationServices(player, location);
+                return;
+            }
+
             var interaction = location.Interactions[choice - 1];
             Console.Clear();
             Console.WriteLine(interaction.Name);
             Console.WriteLine(interaction.Description);
             Console.WriteLine();
-            ResolveInteraction(player, location, interaction);
+            ResolveInteraction(player, location, interaction, quests);
             Pause();
         }
 
-        private static void ResolveInteraction(PlayerCharacter player, WorldLocation location, WorldInteraction interaction)
+        // Applies the behavior associated with one selected interaction.
+        private static void ResolveInteraction(PlayerCharacter player, WorldLocation location, WorldInteraction interaction, List<Quest> quests)
         {
             switch (interaction.Type)
             {
@@ -312,9 +351,24 @@ namespace NewWorldPP2.UI
                     Console.WriteLine("You have a useful conversation and gain a better understanding of the area.");
                     break;
                 case WorldInteractionType.Quest:
-                    player.Gold += 15;
+                    var trackedQuest = quests.Find(quest => quest.Id == interaction.Id);
+                    if (trackedQuest != null)
+                    {
+                        Console.WriteLine($"This quest is already tracked: {trackedQuest.Title} [{trackedQuest.Status}].");
+                        break;
+                    }
+
+                    quests.Add(new Quest
+                    {
+                        Id = interaction.Id,
+                        Title = interaction.Name,
+                        Description = interaction.Description,
+                        RequiredEncounters = 1,
+                        GoldReward = 15,
+                        ExperienceReward = 40
+                    });
                     player.Morality++;
-                    Console.WriteLine("You accept the task and receive an advance of 15 gold.");
+                    Console.WriteLine("Quest accepted and added to your tracked quests.");
                     break;
                 case WorldInteractionType.Service:
                     UseSpecificService(player, interaction);
@@ -322,8 +376,9 @@ namespace NewWorldPP2.UI
                 case WorldInteractionType.Chest:
                     if (player.TryOpenChest(interaction.Id))
                     {
-                        player.Gold += 10;
-                        Console.WriteLine("You find 10 gold inside.");
+                        var gold = 10 + StatCalculator.RewardBonus(player.Stats) * 2;
+                        player.Gold += gold;
+                        Console.WriteLine($"You find {gold} gold inside.");
                     }
                     else
                     {
@@ -346,10 +401,16 @@ namespace NewWorldPP2.UI
                         : new Item { Name = "Moonleaf Herb", Rarity = ItemRarity.Common, Magic = 1, Durability = 3 };
                     player.Inventory.Add(resource);
                     Console.WriteLine($"You gather {resource.Name} and add it to your inventory.");
+                    if (Dice.Roll(100) <= StatCalculator.DiscoveryChance(player.Stats))
+                    {
+                        player.Inventory.Add(new Item { Name = "Extra gathered materials", Rarity = ItemRarity.Common, Magic = 1, Durability = 1 });
+                        Console.WriteLine("Your perception and luck help you find extra materials.");
+                    }
                     break;
             }
         }
 
+        // Handles a named service interaction such as resting or training.
         private static void UseSpecificService(PlayerCharacter player, WorldInteraction interaction)
         {
             if (interaction.Id.Contains("room", StringComparison.Ordinal) || interaction.Id.Contains("blessing", StringComparison.Ordinal))
@@ -360,7 +421,7 @@ namespace NewWorldPP2.UI
             }
             else if (interaction.Id.Contains("smith", StringComparison.Ordinal))
             {
-                const int cost = 25;
+                var cost = Math.Max(10, 25 * (100 - StatCalculator.ShopDiscountPercent(player.Stats)) / 100);
                 if (player.Gold < cost)
                 {
                     Console.WriteLine("You do not have enough gold for the weapon.");
@@ -379,6 +440,7 @@ namespace NewWorldPP2.UI
             }
         }
 
+        // Opens the service menu appropriate to the current location.
         private static void UseLocationServices(PlayerCharacter player, WorldLocation location)
         {
             Console.Clear();
@@ -393,76 +455,132 @@ namespace NewWorldPP2.UI
             }
 
             Console.WriteLine();
+            ShowLocationServiceOptions(location.Type);
+            Console.Write("Choose a service: ");
+            var choice = Console.ReadLine();
+            if (choice == "0") return;
+
             switch (location.Type)
             {
                 case LocationType.Tavern:
-                    TavernInteraction(player);
+                    if (choice == "1") TavernRest(player);
+                    else if (choice == "2") TavernRumors();
+                    else InvalidServiceChoice();
                     break;
                 case LocationType.Guild:
-                    GuildInteraction(player);
+                    if (choice == "1") GuildContract(player);
+                    else if (choice == "2") GuildTraining(player);
+                    else InvalidServiceChoice();
                     break;
                 case LocationType.Market:
-                    MarketInteraction(player);
+                    if (choice == "1") MarketInteraction(player);
+                    else InvalidServiceChoice();
                     break;
                 case LocationType.Landmark:
-                    LandmarkInteraction(player, location);
+                    if (choice == "1") LandmarkInteraction(player, location);
+                    else InvalidServiceChoice();
                     break;
                 case LocationType.Shrine:
-                    ShrineInteraction(player);
+                    if (choice == "1") ShrineInteraction(player);
+                    else if (choice == "2") ShrineHistory();
+                    else InvalidServiceChoice();
                     break;
                 case LocationType.Dungeon:
-                    DungeonInteraction(player, location);
+                    if (choice == "1") DungeonInteraction(player, location);
+                    else InvalidServiceChoice();
                     break;
                 case LocationType.Town:
-                    Console.WriteLine("The townsfolk welcome you. Ask around for local news.");
-                    player.Morality++;
+                    if (choice == "1") TownNews(player);
+                    else InvalidServiceChoice();
+                    break;
+                default:
+                    InvalidServiceChoice();
                     break;
             }
 
             Pause();
         }
 
-        private static void TavernInteraction(PlayerCharacter player)
+        // Lists the services available at the current location without performing them automatically.
+        private static void ShowLocationServiceOptions(LocationType locationType)
         {
-            Console.WriteLine("You settle beside the hearth and speak with the tavern keeper.");
+            switch (locationType)
+            {
+                case LocationType.Tavern:
+                    Console.WriteLine("1) Rest and recover");
+                    Console.WriteLine("2) Hear rumors");
+                    break;
+                case LocationType.Guild:
+                    Console.WriteLine("1) Complete a contract");
+                    Console.WriteLine("2) Train with guild members");
+                    break;
+                case LocationType.Market:
+                    Console.WriteLine("1) Browse the market");
+                    break;
+                case LocationType.Landmark:
+                    Console.WriteLine("1) Explore the area");
+                    break;
+                case LocationType.Shrine:
+                    Console.WriteLine("1) Pray for guidance and recovery");
+                    Console.WriteLine("2) Learn local history");
+                    break;
+                case LocationType.Dungeon:
+                    Console.WriteLine("1) Explore the dungeon entrance");
+                    break;
+                case LocationType.Town:
+                    Console.WriteLine("1) Ask the townsfolk for news");
+                    break;
+            }
+
+            Console.WriteLine("0) Back");
+        }
+
+        // Resolves the tavern's rest service.
+        private static void TavernRest(PlayerCharacter player)
+        {
             player.Health = player.MaxHealth;
             Console.WriteLine("You rest fully and recover all health.");
+        }
+
+        // Resolves the tavern's rumor service.
+        private static void TavernRumors()
+        {
+            Console.WriteLine("You speak with the tavern keeper.");
             Console.WriteLine("Rumor: A sealed road near the Old Watchtower has recently reopened.");
         }
 
-        private static void GuildInteraction(PlayerCharacter player)
+        // Resolves a guild contract.
+        private static void GuildContract(PlayerCharacter player)
         {
             Console.WriteLine("The guild clerk offers you a simple contract.");
             player.Gold += 20;
+            Console.WriteLine("You complete a training contract and earn 20 gold.");
+        }
+
+        // Resolves guild training.
+        private static void GuildTraining(PlayerCharacter player)
+        {
             player.MaxHealth++;
             player.Health = Math.Min(player.MaxHealth, player.Health + 1);
-            Console.WriteLine("You complete a training contract and earn 20 gold.");
             Console.WriteLine("Guild training permanently increases your maximum health by 1.");
         }
 
+        // Resolves the market's item and merchant options.
         private static void MarketInteraction(PlayerCharacter player)
         {
-            const int itemCost = 25;
-            Console.WriteLine($"A blacksmith offers you an Iron Sword for {itemCost} gold.");
-            if (player.Gold < itemCost)
-            {
-                Console.WriteLine("You do not have enough gold.");
-                return;
-            }
-
-            player.Gold -= itemCost;
-            player.Inventory.Add(ItemFactory.CreateWeapon(WeaponCategory.Sword, Material.Iron, ItemRarity.Common));
-            Console.WriteLine("You purchase an Iron Sword and add it to your inventory.");
+            ShopSystem.Open(player);
         }
 
+        // Resolves exploration options for a landmark location.
         private static void LandmarkInteraction(PlayerCharacter player, WorldLocation location)
         {
-            var roll = Dice.Roll();
+            var roll = Dice.Roll() + StatCalculator.DiscoveryChance(player.Stats) / 10;
             Console.WriteLine($"You investigate {location.Name}. Exploration roll: {roll}");
             if (roll >= 12)
             {
-                player.Gold += 15;
-                Console.WriteLine("You discover an old traveler's cache containing 15 gold.");
+                var gold = 15 + StatCalculator.RewardBonus(player.Stats) * 2;
+                player.Gold += gold;
+                Console.WriteLine($"You discover an old traveler's cache containing {gold} gold.");
             }
             else
             {
@@ -471,6 +589,7 @@ namespace NewWorldPP2.UI
             }
         }
 
+        // Resolves the shrine's guidance and recovery options.
         private static void ShrineInteraction(PlayerCharacter player)
         {
             player.Health = player.MaxHealth;
@@ -479,15 +598,35 @@ namespace NewWorldPP2.UI
             Console.WriteLine("Health restored and morality increased by 1.");
         }
 
+        // Shares local history without consuming the shrine's recovery service.
+        private static void ShrineHistory()
+        {
+            Console.WriteLine("The shrine keeper tells stories of the Ember Star and the first settlers.");
+        }
+
+        // Shares local news in a town.
+        private static void TownNews(PlayerCharacter player)
+        {
+            Console.WriteLine("The townsfolk welcome you. Ask around for local news.");
+            player.Morality++;
+        }
+
+        private static void InvalidServiceChoice()
+        {
+            Console.WriteLine("Invalid service choice.");
+        }
+
+        // Starts the dungeon or gauntlet associated with the location.
         private static void DungeonInteraction(PlayerCharacter player, WorldLocation location)
         {
-            var roll = Dice.Roll();
+            var roll = Dice.Roll() + StatCalculator.InitiativeBonus(player.Stats) + StatCalculator.AccuracyBonus(player.Stats) / 2;
             Console.WriteLine($"You enter {location.Name}. Expedition roll: {roll}");
             if (roll >= 10)
             {
-                player.Gold += 30;
+                var gold = 30 + StatCalculator.RewardBonus(player.Stats) * 2;
+                player.Gold += gold;
                 player.Inventory.Add(ItemFactory.CreateWeapon(WeaponCategory.Dagger, Material.Bronze, ItemRarity.Uncommon));
-                Console.WriteLine("You defeat a lurking creature and recover 30 gold and an Uncommon Bronze Dagger.");
+                Console.WriteLine($"You defeat a lurking creature and recover {gold} gold and an Uncommon Bronze Dagger.");
             }
             else
             {
@@ -496,6 +635,7 @@ namespace NewWorldPP2.UI
             }
         }
 
+        // Waits for acknowledgement before returning to the previous menu.
         private static void Pause()
         {
             Console.WriteLine();

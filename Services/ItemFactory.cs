@@ -4,6 +4,7 @@ using NewWorldPP2.Entities;
 
 namespace NewWorldPP2.Services
 {
+    // Creates weapons, armor, and potions from their gameplay categories.
     public static class ItemFactory
     {
         // Lists used by game to spawn or reward items
@@ -51,7 +52,9 @@ namespace NewWorldPP2.Services
                 Defense = 0,
                 Magic = cat == WeaponCategory.Staff || cat == WeaponCategory.MagicGun ? (int)Math.Round(3 * rarityMul) : 0,
                 Speed = cat == WeaponCategory.Dagger || cat == WeaponCategory.Bow ? 2 : 0,
-                Durability = (int)Math.Round(30 * matMul * rarityMul)
+                Durability = (int)Math.Round(30 * matMul * rarityMul),
+                WeaponCategory = cat,
+                RequiredStats = WeaponRequirements(cat, mat, rarity)
             };
 
             if (rarity == ItemRarity.Mythical)
@@ -62,6 +65,47 @@ namespace NewWorldPP2.Services
             return itm;
         }
 
+        private static Stats WeaponRequirements(WeaponCategory category, Material material, ItemRarity rarity)
+        {
+            var materialTier = material switch
+            {
+                Material.Wood => 0,
+                Material.Bronze => 1,
+                Material.Iron => 2,
+                Material.Steel => 3,
+                Material.Obsidian => 4,
+                Material.Mythril => 5,
+                Material.Adamantine => 6,
+                _ => 0
+            };
+            var rarityTier = rarity switch
+            {
+                ItemRarity.Common => 0,
+                ItemRarity.Uncommon => 1,
+                ItemRarity.Rare => 2,
+                ItemRarity.Epic => 3,
+                ItemRarity.Legendary => 4,
+                ItemRarity.Mythical => 5,
+                _ => 0
+            };
+            var primaryRequirement = 3 + materialTier * 2 + rarityTier * 2;
+
+            var requirements = category switch
+            {
+                WeaponCategory.Bow => new Stats(dexterity: primaryRequirement, perception: Math.Max(0, primaryRequirement - 3)),
+                WeaponCategory.Dagger => new Stats(speed: rarity == ItemRarity.Mythical ? 20 : primaryRequirement + 2, dexterity: primaryRequirement),
+                WeaponCategory.Staff => new Stats(intelligence: primaryRequirement, wisdom: Math.Max(0, primaryRequirement - 2)),
+                WeaponCategory.MagicGun => new Stats(intelligence: primaryRequirement, perception: primaryRequirement),
+                WeaponCategory.Gauntlets => new Stats(strength: primaryRequirement, dexterity: Math.Max(0, primaryRequirement - 2)),
+                WeaponCategory.Spear => new Stats(strength: primaryRequirement, dexterity: Math.Max(0, primaryRequirement - 3)),
+                WeaponCategory.Mace => new Stats(strength: primaryRequirement, constitution: Math.Max(0, primaryRequirement - 2)),
+                _ => new Stats(strength: primaryRequirement)
+            };
+
+            return requirements;
+        }
+
+        // Creates armor whose defense and durability scale with material and rarity.
         public static Item CreateArmor(ArmorCategory cat, Material mat, ItemRarity rarity)
         {
             var baseDef = cat switch
@@ -108,6 +152,7 @@ namespace NewWorldPP2.Services
             return itm;
         }
 
+        // Creates a consumable whose effect strength scales with rarity.
         public static Item CreatePotion(PotionType type, ItemRarity rarity)
         {
             var potency = type switch
@@ -142,6 +187,7 @@ namespace NewWorldPP2.Services
             return itm;
         }
 
+        // Converts an item rarity into the multiplier used by factory statistics.
         private static double RarityMultiplier(ItemRarity r) => r switch
         {
             ItemRarity.Common => 1.0,
@@ -153,7 +199,7 @@ namespace NewWorldPP2.Services
             _ => 1.0
         };
 
-        //weapon abilities for mythical items
+        // Creates the special ability associated with a mythical weapon category.
         private static List<Ability> MythicalAbilitiesForWeapon(WeaponCategory cat)
         {
             return cat switch
@@ -167,6 +213,7 @@ namespace NewWorldPP2.Services
             };
         }
 
+        // Creates the special ability associated with a mythical armor category.
         private static List<Ability> MythicalAbilitiesForArmor(ArmorCategory cat)
         {
             return cat switch
@@ -177,6 +224,7 @@ namespace NewWorldPP2.Services
             };
         }
 
+        // Creates the special ability associated with a mythical potion type.
         private static List<Ability> MythicalAbilitiesForPotion(PotionType type)
         {
             return type switch

@@ -6,8 +6,10 @@ using NewWorldPP2.UI;
 
 namespace NewWorldPP2
 {
+    // Coordinates the application's top-level character and world menus.
     class Program
     {
+        // Runs the main menu until the player chooses to exit.
         static void Main(string[] args)
         {
             PlayerCharacter? player = null;
@@ -26,7 +28,8 @@ namespace NewWorldPP2
                 Console.WriteLine("5) Load Character");
                 Console.WriteLine("6) Delete Save");
                 Console.WriteLine("7) Start Fantasy World");
-                Console.WriteLine("8) Exit");
+                Console.WriteLine("8) Multiplayer");
+                Console.WriteLine("9) Exit");
                 Console.Write("Choose an option: ");
                 var key = Console.ReadLine() ?? string.Empty;
 
@@ -172,6 +175,19 @@ namespace NewWorldPP2
                         }
                         break;
                     case "8":
+                        if (player == null)
+                        {
+                            Console.WriteLine("Create or load a character before entering multiplayer.");
+                            Console.WriteLine("Press Enter to continue...");
+                            Console.ReadLine();
+                            Console.Clear();
+                        }
+                        else
+                        {
+                            MultiplayerMenu.Enter(player);
+                        }
+                        break;
+                    case "9":
                         return;
                         default:
                             Console.WriteLine("Invalid option. Press Enter to continue...");
@@ -182,6 +198,7 @@ namespace NewWorldPP2
             }
         }
 
+        // Displays the game title and introductory screen.
         private static void ShowTitleScreen()
         {
             Console.WriteLine(@"              *        .        *
@@ -198,6 +215,7 @@ namespace NewWorldPP2
         }
 
         // Minimal password masking for console input
+        // Reads a password without echoing its characters to the console.
         private static string ReadPassword()
         {
             var pass = string.Empty;

@@ -8,6 +8,7 @@ namespace NewWorldPP2.Services.World
         Market,
         Landmark,
         Shrine,
-        Dungeon
+        Dungeon,
+        Gauntlet
     }
 }

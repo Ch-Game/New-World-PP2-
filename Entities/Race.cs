@@ -7,6 +7,13 @@ namespace NewWorldPP2.Entities
         Human = 1,
         Elf,
         Dwarf,
-        Orc
+        Orc,
+        Angel,
+        Demon,
+        Goblin,
+        Dragon,
+        Undead,
+        WhiteWalker,
+
     }
 }

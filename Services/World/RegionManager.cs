@@ -2,6 +2,7 @@
 
 namespace NewWorldPP2.Services.World
 {
+    // Tracks the active region and simulates transitions between regions.
     public class RegionManager
     {
         public string CurrentRegion { get; private set; } = "Starting Province";

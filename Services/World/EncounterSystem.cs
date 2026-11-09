@@ -3,8 +3,10 @@ using NewWorldPP2.Services;
 
 namespace NewWorldPP2.Services.World
 {
+    // Builds encounters appropriate to a location or a random travel event.
     public static class EncounterSystem
     {
+        // Creates one of the available roaming encounter types.
         public static Encounter CreateRandomEncounter(WorldLocation location)
         {
             return Dice.Roll(4) switch
@@ -16,6 +18,7 @@ namespace NewWorldPP2.Services.World
             };
         }
 
+        // Selects an encounter based on the type of the current location.
         public static Encounter CreateLocationEncounter(WorldLocation location)
         {
             return location.Type switch
@@ -30,6 +33,7 @@ namespace NewWorldPP2.Services.World
             };
         }
 
+        // Creates a combat encounter with stronger enemies for fixed locations.
         private static Encounter CreateCombatEncounter(WorldLocation location, bool roaming)
         {
             var enemy = roaming
@@ -41,6 +45,7 @@ namespace NewWorldPP2.Services.World
                     Attack = 6,
                     Defense = 2,
                     GoldReward = 18,
+                    ExperienceReward = 30,
                     ItemReward = ItemFactory.CreatePotion(PotionType.Health, ItemRarity.Common)
                 }
                 : new Enemy
@@ -51,6 +56,7 @@ namespace NewWorldPP2.Services.World
                     Attack = 8,
                     Defense = 4,
                     GoldReward = 30,
+                    ExperienceReward = 45,
                     ItemReward = ItemFactory.CreateWeapon(WeaponCategory.Dagger, Material.Bronze, ItemRarity.Uncommon)
                 };
 
@@ -66,6 +72,7 @@ namespace NewWorldPP2.Services.World
             };
         }
 
+        // Creates an NPC encounter containing a quest and an associated enemy.
         public static Encounter CreateNpcEncounter(WorldLocation location, bool roaming = false)
         {
             var quest = new Quest
@@ -77,6 +84,7 @@ namespace NewWorldPP2.Services.World
                     : $"Help the people of {location.Name} by surviving one dangerous encounter.",
                 RequiredEncounters = 1,
                 GoldReward = roaming ? 25 : 35,
+                ExperienceReward = roaming ? 40 : 60,
                 ItemReward = ItemFactory.CreatePotion(PotionType.Health, ItemRarity.Uncommon)
             };
 
@@ -88,6 +96,7 @@ namespace NewWorldPP2.Services.World
                 Attack = roaming ? 5 : 6,
                 Defense = roaming ? 2 : 3,
                 GoldReward = roaming ? 12 : 16,
+                ExperienceReward = roaming ? 25 : 35,
                 ItemReward = ItemFactory.CreatePotion(PotionType.Health, ItemRarity.Common)
             };
 
@@ -104,6 +113,7 @@ namespace NewWorldPP2.Services.World
             };
         }
 
+        // Creates a cache encounter with randomized gold and a potion reward.
         private static Encounter CreateTreasureEncounter(WorldLocation location)
         {
             return new Encounter
@@ -117,6 +127,7 @@ namespace NewWorldPP2.Services.World
             };
         }
 
+        // Creates a trap encounter that can be resolved by the world UI.
         private static Encounter CreateTrapEncounter(WorldLocation location)
         {
             return new Encounter

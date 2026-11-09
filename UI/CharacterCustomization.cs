@@ -3,8 +3,10 @@ using NewWorldPP2.Entities;
 
 namespace NewWorldPP2.UI
 {
+    // Provides the console menus for selecting a character's starting options.
     public static class CharacterCustomization
     {
+        // Prompts until the player selects a valid character class.
         public static CharacterClass ChooseClass()
         {
             while (true)
@@ -28,6 +30,7 @@ namespace NewWorldPP2.UI
             }
         }
 
+        // Prompts until the player selects a valid starting weapon.
         public static WeaponType ChooseWeapon(CharacterClass cls)
         {
             while (true)
@@ -51,6 +54,7 @@ namespace NewWorldPP2.UI
             }
         }
 
+        // Prompts until the player selects a valid starting armor.
         public static ArmorType ChooseArmor(CharacterClass cls)
         {
             while (true)

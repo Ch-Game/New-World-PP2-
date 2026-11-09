@@ -1,5 +1,6 @@
 namespace NewWorldPP2.Services.World
 {
+    // Identifies the kind of action available at a world location.
     public enum WorldInteractionType
     {
         Npc,
@@ -11,6 +12,7 @@ namespace NewWorldPP2.Services.World
         Resource
     }
 
+    // Describes an interactive object or activity at a location.
     public class WorldInteraction
     {
         public string Id { get; set; } = string.Empty;

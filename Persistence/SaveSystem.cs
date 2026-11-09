@@ -8,6 +8,7 @@ using NewWorldPP2.Entities;
 
 namespace NewWorldPP2.Persistence
 {
+    // Provides file-based character saves with password verification.
     public static class SaveSystem
     {
         private const string SaveFolder = "Saves";
@@ -19,6 +20,7 @@ namespace NewWorldPP2.Persistence
             public NewWorldPP2.Entities.PlayerCharacter? Character { get; set; }
         }
 
+        // Serializes a new character save without overwriting an existing account.
         public static bool SaveCharacter(NewWorldPP2.Entities.PlayerCharacter pc, string username, string password)
         {
             if (pc == null) return false;
@@ -48,6 +50,7 @@ namespace NewWorldPP2.Persistence
             }
         }
 
+        // Checks whether a save file exists for the supplied username.
         public static bool SaveExists(string username)
         {
             if (string.IsNullOrWhiteSpace(username)) return false;
@@ -55,6 +58,7 @@ namespace NewWorldPP2.Persistence
             return File.Exists(file);
         }
 
+        // Loads and authenticates a saved character before restoring derived statistics.
         public static NewWorldPP2.Entities.PlayerCharacter? LoadCharacter(string username, string password)
         {
             if (string.IsNullOrWhiteSpace(username)) return null;
@@ -76,6 +80,7 @@ namespace NewWorldPP2.Persistence
                 var character = data.Character;
                 if (character == null) return null;
 
+                character.NormalizeProgression();
                 character.RecalculateDerivedStats();
                 return character;
             }
@@ -85,6 +90,7 @@ namespace NewWorldPP2.Persistence
             }
         }
 
+        // Deletes a save only after verifying the associated password.
         public static bool DeleteSave(string username, string password)
         {
             if (string.IsNullOrWhiteSpace(username)) return false;
@@ -112,6 +118,7 @@ namespace NewWorldPP2.Persistence
             }
         }
 
+        // Converts a username into a safe, stable file-name component.
         private static string Sanitize(string username)
         {
             if (string.IsNullOrWhiteSpace(username)) return string.Empty;
@@ -124,6 +131,7 @@ namespace NewWorldPP2.Persistence
             return sb.ToString().ToLowerInvariant();
         }
 
+        // Creates the stored password digest from the username and password.
         private static string ComputeHash(string username, string password)
         {
             using var sha = SHA256.Create();
