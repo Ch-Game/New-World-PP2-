@@ -13,6 +13,7 @@ namespace NewWorldPP2.Entities
         public int Speed { get; set; }
         public int Durability { get; set; }
         public WeaponCategory? WeaponCategory { get; set; }
+        public ArmorCategory? ArmorCategory { get; set; }
         public Stats RequiredStats { get; set; } = new Stats();
         // Only mythical items will have abilities populated by factory
         public List<Ability>? Abilities { get; set; }

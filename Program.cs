@@ -2,6 +2,7 @@
 using NewWorldPP2.Entities;
 using NewWorldPP2.Persistence;
 using NewWorldPP2.Services;
+using NewWorldPP2.Services.World;
 using NewWorldPP2.UI;
 
 namespace NewWorldPP2
@@ -15,6 +16,8 @@ namespace NewWorldPP2
             PlayerCharacter? player = null;
             string? saveUsername = null;
             string? savePassword = null;
+            var worldState = new WorldState();
+            var quests = new List<Quest>();
 
             while (true)
             {
@@ -39,6 +42,8 @@ namespace NewWorldPP2
                         player = CharacterCreation.CreateCharacter();
                         saveUsername = null;
                         savePassword = null;
+                        worldState = new WorldState();
+                        quests = new List<Quest>();
                         break;
                     case "2":
                         if (player == null)
@@ -81,20 +86,15 @@ namespace NewWorldPP2
                             var user = Console.ReadLine()?.Trim() ?? string.Empty;
                             Console.Write("Enter password: ");
                             var pass = ReadPassword();
-                            if (SaveSystem.SaveExists(user))
+                            var ok = SaveSystem.SaveExists(user)
+                                ? SaveSystem.UpdateGame(player, user, pass, worldState, quests)
+                                : SaveSystem.SaveGame(player, user, pass, worldState, quests);
+                            if (ok)
                             {
-                                Console.WriteLine("A save with that username already exists. Choose a different username.");
+                                saveUsername = user;
+                                savePassword = pass;
                             }
-                            else
-                            {
-                                var ok = SaveSystem.SaveCharacter(player, user, pass);
-                                if (ok)
-                                {
-                                    saveUsername = user;
-                                    savePassword = pass;
-                                }
-                                Console.WriteLine(ok ? "Saved successfully." : "Save failed.");
-                            }
+                            Console.WriteLine(ok ? "Saved successfully." : "Save failed (incorrect password or invalid save data).");
                             Console.WriteLine("Press Enter to continue...");
                             Console.ReadLine();
                             Console.Clear();
@@ -105,7 +105,7 @@ namespace NewWorldPP2
                         var loadUser = Console.ReadLine()?.Trim() ?? string.Empty;
                         Console.Write("Enter password: ");
                         var loadPass = ReadPassword();
-                        var loaded = SaveSystem.LoadCharacter(loadUser, loadPass);
+                        var loaded = SaveSystem.LoadGame(loadUser, loadPass);
                         if (loaded == null)
                         {
                             Console.WriteLine("Failed to load save (incorrect user/password or missing save). Press Enter...");
@@ -114,7 +114,9 @@ namespace NewWorldPP2
                         }
                         else
                         {
-                            player = loaded;
+                            player = loaded.Character;
+                            worldState = loaded.WorldState;
+                            quests = loaded.Quests;
                             saveUsername = loadUser;
                             savePassword = loadPass;
                             Console.WriteLine("Save loaded. Press Enter to continue...");
@@ -154,7 +156,13 @@ namespace NewWorldPP2
                         }
                         else
                         {
-                            WorldExplorer.Enter(player, () =>
+                            WorldExplorer.Enter(player, worldState, quests, () =>
+                            {
+                                if (saveUsername != null && savePassword != null)
+                                {
+                                    SaveSystem.UpdateGame(player, saveUsername, savePassword, worldState, quests);
+                                }
+                            }, () =>
                             {
                                 if (saveUsername != null && savePassword != null)
                                 {
@@ -188,6 +196,10 @@ namespace NewWorldPP2
                         }
                         break;
                     case "9":
+                        if (player != null && saveUsername != null && savePassword != null)
+                        {
+                            SaveSystem.UpdateGame(player, saveUsername, savePassword, worldState, quests);
+                        }
                         return;
                         default:
                             Console.WriteLine("Invalid option. Press Enter to continue...");

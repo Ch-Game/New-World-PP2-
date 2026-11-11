@@ -1,6 +1,7 @@
-﻿
-
+﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using NewWorldPP2.Services;
 
 namespace NewWorldPP2.Entities
 {
@@ -25,6 +26,9 @@ namespace NewWorldPP2.Entities
         public int Experience { get; set; }
         public int UnspentStatPoints { get; set; }
         public List<Item> Inventory { get; set; } = new();
+        public HashSet<string> Skills { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+        public List<Move> KnownMoves { get; set; } = new();
+        public List<string> EquippedMoves { get; set; } = new();
         public HashSet<string> OpenedChestIds { get; set; } = new();
 
         // Records a chest as opened and prevents the same chest from being opened twice.
@@ -65,6 +69,13 @@ namespace NewWorldPP2.Entities
                 Experience -= ExperienceToNextLevel;
                 Level = Math.Max(1, Level) + 1;
                 UnspentStatPoints += 3;
+                Skills.Add(Level switch
+                {
+                    2 => "Combat Training",
+                    4 => "Field Medicine",
+                    _ => string.Empty
+                });
+                Skills.Remove(string.Empty);
                 levelsGained++;
             }
 
@@ -76,13 +87,34 @@ namespace NewWorldPP2.Entities
             Level = Math.Max(1, Level);
             Experience = Math.Max(0, Experience);
             UnspentStatPoints = Math.Max(0, UnspentStatPoints);
+            Inventory ??= new List<Item>();
+            Skills ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            KnownMoves ??= new List<Move>();
+            EquippedMoves ??= new List<string>();
             while (Experience >= ExperienceToNextLevel)
             {
                 Experience -= ExperienceToNextLevel;
                 Level++;
                 UnspentStatPoints += 3;
             }
+
+            if (Level >= 2) Skills.Add("Combat Training");
+            if (Level >= 4) Skills.Add("Field Medicine");
+            MoveCatalog.Refresh(this);
         }
+
+        public void RefreshMoves() => MoveCatalog.Refresh(this);
+
+        public bool EquipMove(string moveName)
+        {
+            var move = KnownMoves.Find(m => m.Name.Equals(moveName, StringComparison.OrdinalIgnoreCase));
+            if (move == null || EquippedMoves.Any(n => n.Equals(move.Name, StringComparison.OrdinalIgnoreCase))) return false;
+            if (EquippedMoves.Count >= 4) return false;
+            EquippedMoves.Add(move.Name);
+            return true;
+        }
+
+        public bool UnequipMove(string moveName) => EquippedMoves.RemoveAll(n => n.Equals(moveName, StringComparison.OrdinalIgnoreCase)) > 0;
 
         // Rebuilds values that depend on the character's base statistics.
         public void RecalculateDerivedStats()

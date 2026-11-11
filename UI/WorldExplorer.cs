@@ -10,11 +10,12 @@ namespace NewWorldPP2.UI
     public static class WorldExplorer
     {
         // Starts world exploration and returns when the player leaves or dies.
-        public static void Enter(PlayerCharacter player, Action? onDeath = null)
+        public static void Enter(PlayerCharacter player, WorldState? savedState = null,
+            List<Quest>? savedQuests = null, Action? onAutosave = null, Action? onDeath = null)
         {
             var map = WorldMap.CreateDefault();
-            var state = new WorldState();
-            var quests = new List<Quest>();
+            var state = savedState ?? new WorldState();
+            var quests = savedQuests ?? new List<Quest>();
             string? lastLocationId = null;
 
             while (true)
@@ -87,6 +88,8 @@ namespace NewWorldPP2.UI
                         Pause();
                         break;
                 }
+
+                onAutosave?.Invoke();
 
                 if (player.Health <= 0)
                 {

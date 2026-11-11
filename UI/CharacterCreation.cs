@@ -41,6 +41,8 @@ namespace NewWorldPP2.UI
             pc.BaseStats = DistributePoints(PointsToDistribute);
 
             ApplyRaceModifiers(pc);
+            pc.Skills.Add("Combat Training");
+            pc.RefreshMoves();
             Console.Clear();
             Console.WriteLine("Write a short backstory (press Enter twice to finish):");
             pc.Backstory = ReadMultiline();

@@ -141,7 +141,8 @@ namespace NewWorldPP2.Services
                 Defense = (int)Math.Round(baseDef * matMul * rarityMul),
                 Magic = cat == ArmorCategory.Robes ? (int)Math.Round(2 * rarityMul) : 0,
                 Speed = cat == ArmorCategory.Robes || cat == ArmorCategory.Tunic ? 1 : 0,
-                Durability = (int)Math.Round(40 * matMul * rarityMul)
+                Durability = (int)Math.Round(40 * matMul * rarityMul),
+                ArmorCategory = cat
             };
 
             if (rarity == ItemRarity.Mythical)
