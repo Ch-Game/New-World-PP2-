@@ -32,7 +32,8 @@ namespace NewWorldPP2
                 Console.WriteLine("6) Delete Save");
                 Console.WriteLine("7) Start Fantasy World");
                 Console.WriteLine("8) Multiplayer");
-                Console.WriteLine("9) Exit");
+                Console.WriteLine("9) Manage Moves");
+                Console.WriteLine("10) Exit");
                 Console.Write("Choose an option: ");
                 var key = Console.ReadLine() ?? string.Empty;
 
@@ -196,6 +197,19 @@ namespace NewWorldPP2
                         }
                         break;
                     case "9":
+                        if (player == null)
+                        {
+                            Console.WriteLine("Create or load a character before managing moves.");
+                            Console.WriteLine("Press Enter to continue...");
+                            Console.ReadLine();
+                            Console.Clear();
+                        }
+                        else
+                        {
+                            MoveMenu.Manage(player);
+                        }
+                        break;
+                    case "10":
                         if (player != null && saveUsername != null && savePassword != null)
                         {
                             SaveSystem.UpdateGame(player, saveUsername, savePassword, worldState, quests);

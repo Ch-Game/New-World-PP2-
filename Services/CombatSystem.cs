@@ -1,5 +1,6 @@
 using System;
 using NewWorldPP2.Entities;
+using NewWorldPP2.UI;
 
 namespace NewWorldPP2.Services
 {
@@ -70,12 +71,13 @@ namespace NewWorldPP2.Services
             {
                 Console.WriteLine($"You defeat {enemy.Name} and earn {enemy.GoldReward} gold.");
                 player.Gold += enemy.GoldReward;
-                var previousLevel = player.Level;
-                player.AddExperience(enemy.ExperienceReward);
+                var previousPoints = player.SpecialMovePoints;
+                var levelsGained = player.AddExperience(enemy.ExperienceReward);
                 Console.WriteLine($"You gain {enemy.ExperienceReward} XP.");
-                if (player.Level > previousLevel)
+                if (levelsGained > 0)
                 {
-                    Console.WriteLine($"Level up! You are now level {player.Level} and gained 3 stat points.");
+                    Console.WriteLine($"Level up! You gained {levelsGained} level(s), 3 stat points per level, and {player.SpecialMovePoints - previousPoints} special move point(s).");
+                    MoveMenu.Manage(player);
                 }
                 if (enemy.ItemReward != null)
                 {
@@ -152,6 +154,12 @@ namespace NewWorldPP2.Services
 
             var selected = player.KnownMoves.Find(m => m.Name.Equals(player.EquippedMoves[choice - 1], StringComparison.OrdinalIgnoreCase));
             if (selected == null) return false;
+
+            if (!player.CanUseMove(selected))
+            {
+                Console.WriteLine($"You need a {selected.RequiredWeaponCategory} to use {selected.Name}.");
+                return false;
+            }
 
             if (selected.Healing > 0)
             {

@@ -7,7 +7,8 @@ namespace NewWorldPP2.Entities
         Level,
         Skill,
         Weapon,
-        Armor
+        Armor,
+        Special
     }
 
     // A combat move that can be learned and placed in one of four combat slots.
@@ -18,6 +19,8 @@ namespace NewWorldPP2.Entities
         public MoveSourceType SourceType { get; set; }
         public string Source { get; set; } = string.Empty;
         public int RequiredLevel { get; set; } = 1;
+        public int SpecialPointCost { get; set; }
+        public WeaponCategory? RequiredWeaponCategory { get; set; }
         public int Power { get; set; }
         public int Accuracy { get; set; } = 85;
         public int Healing { get; set; }

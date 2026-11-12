@@ -240,13 +240,14 @@ namespace NewWorldPP2.UI
                 if (quest.Status != QuestStatus.Completed || quest.RewardsClaimed) continue;
 
                 player.Gold += quest.GoldReward;
-                var previousLevel = player.Level;
-                player.AddExperience(quest.ExperienceReward);
+                var previousPoints = player.SpecialMovePoints;
+                var levelsGained = player.AddExperience(quest.ExperienceReward);
                 AddReward(player, quest.ItemReward);
                 Console.WriteLine($"Quest complete: {quest.Title}. Reward: {quest.GoldReward} gold and {quest.ExperienceReward} XP.");
-                if (player.Level > previousLevel)
+                if (levelsGained > 0)
                 {
-                    Console.WriteLine($"Level up! You are now level {player.Level} and gained 3 stat points.");
+                    Console.WriteLine($"Level up! You gained {levelsGained} level(s), 3 stat points per level, and {player.SpecialMovePoints - previousPoints} special move point(s).");
+                    MoveMenu.Manage(player);
                 }
                 quest.GoldReward = 0;
                 quest.ExperienceReward = 0;

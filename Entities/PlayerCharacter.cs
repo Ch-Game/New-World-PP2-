@@ -25,6 +25,7 @@ namespace NewWorldPP2.Entities
         public int Level { get; set; } = 1;
         public int Experience { get; set; }
         public int UnspentStatPoints { get; set; }
+        public int SpecialMovePoints { get; set; }
         public List<Item> Inventory { get; set; } = new();
         public HashSet<string> Skills { get; set; } = new(StringComparer.OrdinalIgnoreCase);
         public List<Move> KnownMoves { get; set; } = new();
@@ -69,6 +70,7 @@ namespace NewWorldPP2.Entities
                 Experience -= ExperienceToNextLevel;
                 Level = Math.Max(1, Level) + 1;
                 UnspentStatPoints += 3;
+                SpecialMovePoints += SpecialMovePointsForLevel(Level);
                 Skills.Add(Level switch
                 {
                     2 => "Combat Training",
@@ -87,6 +89,7 @@ namespace NewWorldPP2.Entities
             Level = Math.Max(1, Level);
             Experience = Math.Max(0, Experience);
             UnspentStatPoints = Math.Max(0, UnspentStatPoints);
+            SpecialMovePoints = Math.Max(0, SpecialMovePoints);
             Inventory ??= new List<Item>();
             Skills ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             KnownMoves ??= new List<Move>();
@@ -96,6 +99,7 @@ namespace NewWorldPP2.Entities
                 Experience -= ExperienceToNextLevel;
                 Level++;
                 UnspentStatPoints += 3;
+                SpecialMovePoints += SpecialMovePointsForLevel(Level);
             }
 
             if (Level >= 2) Skills.Add("Combat Training");
@@ -104,6 +108,49 @@ namespace NewWorldPP2.Entities
         }
 
         public void RefreshMoves() => MoveCatalog.Refresh(this);
+
+        public bool CanUseMove(Move move)
+        {
+            if (move.RequiredWeaponCategory == null) return true;
+
+            return Inventory.Any(item => item.WeaponCategory == move.RequiredWeaponCategory
+                && MeetsWeaponRequirements(item));
+        }
+
+        public static int SpecialMovePointsForLevel(int level) => 1 + Math.Max(1, level) / 3;
+
+        public IReadOnlyList<Move> GetAvailableSpecialMoves()
+        {
+            return MoveCatalog.GetSpecialMoves(this)
+                .Where(move => !KnownMoves.Any(known => known.Name.Equals(move.Name, StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+        }
+
+        public bool LearnSpecialMove(string moveName)
+        {
+            var move = MoveCatalog.GetSpecialMoves(this)
+                .FirstOrDefault(candidate => candidate.Name.Equals(moveName, StringComparison.OrdinalIgnoreCase));
+            if (move == null || KnownMoves.Any(known => known.Name.Equals(move.Name, StringComparison.OrdinalIgnoreCase))
+                || SpecialMovePoints < move.SpecialPointCost)
+            {
+                return false;
+            }
+
+            SpecialMovePoints -= move.SpecialPointCost;
+            KnownMoves.Add(move);
+            return true;
+        }
+
+        public bool ForgetSpecialMove(string moveName)
+        {
+            var move = KnownMoves.FirstOrDefault(candidate => candidate.SourceType == MoveSourceType.Special
+                && candidate.Name.Equals(moveName, StringComparison.OrdinalIgnoreCase));
+            if (move == null || EquippedMoves.Any(name => name.Equals(move.Name, StringComparison.OrdinalIgnoreCase))) return false;
+
+            KnownMoves.Remove(move);
+            SpecialMovePoints += move.SpecialPointCost;
+            return true;
+        }
 
         public bool EquipMove(string moveName)
         {
