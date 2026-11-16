@@ -1,6 +1,7 @@
 using System;
 using NewWorldPP2.Entities;
 using NewWorldPP2.UI;
+using NewWorldPP2.Services.World;
 
 namespace NewWorldPP2.Services
 {
@@ -8,12 +9,14 @@ namespace NewWorldPP2.Services
     public static class CombatSystem
     {
         // Presents combat actions until the player wins, flees, or is defeated.
-        public static bool Fight(PlayerCharacter player, Enemy enemy)
+        public static bool Fight(PlayerCharacter player, Enemy enemy, WeatherCondition? weather = null)
         {
+            weather ??= WeatherSystem.GetCondition("Clear");
             player.RefreshMoves();
             Console.Clear();
             Console.WriteLine($"A fight begins: {enemy.Name}!");
             Console.WriteLine(enemy.Name + " has " + enemy.MaxHealth + " health.");
+            Console.WriteLine($"Weather: {weather.Name} - {weather.Description}");
             var round = 1;
             var moveDefenseBonus = 0;
 
@@ -33,11 +36,11 @@ namespace NewWorldPP2.Services
                 {
                     case "1":
                         Console.Clear();
-                        actionSucceeded = Attack(player, enemy);
+                        actionSucceeded = Attack(player, enemy, weather);
                         break;
                     case "2":
                         Console.Clear();
-                        actionSucceeded = UseMove(player, enemy, out moveDefenseBonus);
+                        actionSucceeded = UseMove(player, enemy, weather, out moveDefenseBonus);
                         break;
                     case "3":
                         Console.Clear();
@@ -61,7 +64,7 @@ namespace NewWorldPP2.Services
 
                 if (actionSucceeded && enemy.Health > 0)
                 {
-                    EnemyAttack(player, enemy, moveDefenseBonus);
+                    EnemyAttack(player, enemy, weather, moveDefenseBonus);
                     moveDefenseBonus = 0;
                     round++;
                 }
@@ -93,7 +96,7 @@ namespace NewWorldPP2.Services
         }
 
         // Calculates player damage using the strongest available weapon.
-        private static bool Attack(PlayerCharacter player, Enemy enemy)
+        private static bool Attack(PlayerCharacter player, Enemy enemy, WeatherCondition weather)
         {
             var weapon = ChooseWeapon(player);
             var weaponAttack = weapon?.Attack ?? 0;
@@ -104,9 +107,11 @@ namespace NewWorldPP2.Services
                 armor = Math.Max(0, armor - Math.Max(1, player.Stats.Perception / 2));
             }
 
-            if (Dice.Roll(20) + accuracy < 8 + armor)
+            var targetDefense = 8 + armor;
+            var attackRoll = Dice.RollD20(accuracy + weather.AccuracyModifier);
+            if (attackRoll.IsCriticalFailure || (!attackRoll.IsCriticalSuccess && attackRoll.Total < targetDefense))
             {
-                Console.WriteLine("Your attack misses.");
+                Console.WriteLine($"You roll d20: {attackRoll.Roll} + {attackRoll.Modifier} = {attackRoll.Total} vs DC {targetDefense}. Your attack misses.");
                 return true;
             }
 
@@ -115,22 +120,38 @@ namespace NewWorldPP2.Services
             {
                 damage += Math.Max(1, StatCalculator.MagicBonus(player.Stats));
             }
-            if (StatCalculator.RollCritical(player.Stats)) damage *= 2;
+            var critical = attackRoll.IsCriticalSuccess || StatCalculator.RollCritical(player.Stats);
+            if (critical) damage *= 2;
             enemy.Health = Math.Max(0, enemy.Health - damage);
-            Console.WriteLine($"You attack with {weapon?.Name ?? "your fists"} for {damage} damage.");
+            Console.WriteLine($"You roll d20: {attackRoll.Roll} + {attackRoll.Modifier} = {attackRoll.Total} vs DC {targetDefense}.");
+            Console.WriteLine(critical
+                ? $"Critical hit! You attack with {weapon?.Name ?? "your fists"} for {damage} damage."
+                : $"You attack with {weapon?.Name ?? "your fists"} for {damage} damage.");
             return true;
         }
 
         // Applies the enemy's attack after a successful player action.
-        private static void EnemyAttack(PlayerCharacter player, Enemy enemy, int moveDefenseBonus = 0)
+        private static void EnemyAttack(PlayerCharacter player, Enemy enemy, WeatherCondition weather, int moveDefenseBonus = 0)
         {
-            var defense = GetArmorDefense(player) + StatCalculator.DefenseBonus(player.Stats) + moveDefenseBonus;
-            var damage = Math.Max(1, enemy.Attack + Dice.Roll(4) - defense);
+            var defense = GetArmorDefense(player) + StatCalculator.DefenseBonus(player.Stats) + weather.PlayerDefenseModifier + moveDefenseBonus;
+            var targetDefense = 8 + defense;
+            var attackRoll = Dice.RollD20(enemy.Attack + weather.EnemyAttackModifier);
+            if (attackRoll.IsCriticalFailure || (!attackRoll.IsCriticalSuccess && attackRoll.Total < targetDefense))
+            {
+                Console.WriteLine($"{enemy.Name} rolls d20: {attackRoll.Roll} + {attackRoll.Modifier} = {attackRoll.Total} vs DC {targetDefense} and misses.");
+                return;
+            }
+
+            var damage = Math.Max(1, enemy.Attack + weather.EnemyAttackModifier + Dice.Roll(4) - defense);
+            if (attackRoll.IsCriticalSuccess) damage *= 2;
             player.Health = Math.Max(0, player.Health - damage);
-            Console.WriteLine($"{enemy.Name} hits you for {damage} damage.");
+            Console.WriteLine($"{enemy.Name} rolls d20: {attackRoll.Roll} + {attackRoll.Modifier} = {attackRoll.Total} vs DC {targetDefense}.");
+            Console.WriteLine(attackRoll.IsCriticalSuccess
+                ? $"Critical hit! {enemy.Name} hits you for {damage} damage."
+                : $"{enemy.Name} hits you for {damage} damage.");
         }
 
-        private static bool UseMove(PlayerCharacter player, Enemy enemy, out int defenseBonus)
+        private static bool UseMove(PlayerCharacter player, Enemy enemy, WeatherCondition weather, out int defenseBonus)
         {
             defenseBonus = 0;
             if (player.EquippedMoves.Count == 0)
@@ -163,7 +184,7 @@ namespace NewWorldPP2.Services
 
             if (selected.Healing > 0)
             {
-                var restored = Math.Min(player.MaxHealth - player.Health, selected.Healing + StatCalculator.HealingBonus(player.Stats));
+                var restored = Math.Min(player.MaxHealth - player.Health, Math.Max(0, selected.Healing + weather.HealingModifier + StatCalculator.HealingBonus(player.Stats)));
                 player.Health += restored;
                 Console.WriteLine($"You use {selected.Name} and restore {restored} health.");
             }
@@ -178,15 +199,18 @@ namespace NewWorldPP2.Services
             {
                 var weapon = ChooseWeapon(player);
                 var armor = selected.IgnoresDefense ? 0 : enemy.Defense;
-                if (Dice.Roll(100) > selected.Accuracy + StatCalculator.AccuracyBonus(player.Stats))
+                var moveAccuracy = Math.Clamp(selected.Accuracy + StatCalculator.AccuracyBonus(player.Stats) + weather.AccuracyModifier, 5, 100);
+                var moveRoll = Dice.Roll(100);
+                if (moveRoll > moveAccuracy)
                 {
-                    Console.WriteLine($"Your {selected.Name} misses.");
+                    Console.WriteLine($"You roll d100: {moveRoll} vs {moveAccuracy}% accuracy. Your {selected.Name} misses.");
                 }
                 else
                 {
                     var damage = Math.Max(1, selected.Power + (weapon?.Attack ?? 0) + StatCalculator.MagicBonus(player.Stats) / 2 - armor);
                     enemy.Health = Math.Max(0, enemy.Health - damage);
                     Console.Clear();
+                    Console.WriteLine($"You roll d100: {moveRoll} vs {moveAccuracy}% accuracy.");
                     Console.WriteLine($"You use {selected.Name} for {damage} damage.");
                 }
             }

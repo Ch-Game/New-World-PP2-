@@ -28,12 +28,16 @@ namespace NewWorldPP2.UI
 
                 if (!string.Equals(lastLocationId, location.Id, StringComparison.Ordinal))
                 {
+                    if (lastLocationId != null)
+                    {
+                        WeatherSystem.ChangeForLocation(state, location.Type);
+                    }
                     ShowArrival(location);
                     lastLocationId = location.Id;
                 }
 
                 Console.Clear();
-                ShowLocation(player, location);
+                ShowLocation(player, location, state);
                 Console.WriteLine();
                 Console.WriteLine("1) Travel");
                 Console.WriteLine("2) Interact with a person, object, or location service");
@@ -61,7 +65,7 @@ namespace NewWorldPP2.UI
                     case "4":
                         if (location.Type is LocationType.Dungeon or LocationType.Gauntlet)
                         {
-                            DungeonSystem.Run(player, location);
+                            DungeonSystem.Run(player, location, WeatherSystem.GetCurrent(state));
                         }
                         else
                         {
@@ -70,11 +74,11 @@ namespace NewWorldPP2.UI
                         }
                         break;
                     case "5":
-                        HandleEncounter(EncounterSystem.CreateLocationEncounter(location), player, quests);
+                        HandleEncounter(EncounterSystem.CreateLocationEncounter(location), player, quests, WeatherSystem.GetCurrent(state));
                         Pause();
                         break;
                     case "6":
-                        HandleEncounter(EncounterSystem.CreateNpcEncounter(location), player, quests);
+                        HandleEncounter(EncounterSystem.CreateNpcEncounter(location), player, quests, WeatherSystem.GetCurrent(state));
                         Pause();
                         break;
                     case "7":
@@ -103,12 +107,14 @@ namespace NewWorldPP2.UI
         }
 
         // Displays the current location and the player's basic context.
-        private static void ShowLocation(PlayerCharacter player, WorldLocation location)
+        private static void ShowLocation(PlayerCharacter player, WorldLocation location, WorldState state)
         {
             Console.WriteLine("=== The Realms of Aetheria ===");
             Console.WriteLine($"Adventurer: {player.Name}");
             Console.WriteLine($"Level: {player.Level} | XP: {player.Experience}/{player.ExperienceToNextLevel} | Stat points: {player.UnspentStatPoints}");
             Console.WriteLine($"Location: {location.Name} ({location.Type})");
+            var weather = WeatherSystem.GetCurrent(state);
+            Console.WriteLine($"Weather: {weather.Name} - {weather.Description}");
             if (!string.IsNullOrWhiteSpace(location.TownName))
             {
                 Console.WriteLine($"Town: {location.TownName}");
@@ -149,28 +155,33 @@ namespace NewWorldPP2.UI
 
             state.CurrentLocationId = currentLocation.Connections[choice - 1];
             var destinationLocation = map.Locations[state.CurrentLocationId];
+            WeatherSystem.ChangeForLocation(state, destinationLocation.Type);
             Console.WriteLine($"You travel to {destinationLocation.Name}.");
-            if (Dice.Roll(100) <= StatCalculator.TravelEncounterChance(player.Stats))
+            var weather = WeatherSystem.GetCurrent(state);
+            var travelChance = Math.Clamp(StatCalculator.TravelEncounterChance(player.Stats) + weather.TravelEncounterModifier, 5, 95);
+            Console.WriteLine($"Weather changes: {weather.Name}. {weather.Description}");
+            if (Dice.Roll(100) <= travelChance)
             {
                 Console.WriteLine("Something approaches on the road...");
-                HandleEncounter(EncounterSystem.CreateRandomEncounter(destinationLocation), player, quests);
+                HandleEncounter(EncounterSystem.CreateRandomEncounter(destinationLocation), player, quests, weather);
             }
 
             Pause();
         }
 
         // Resolves the selected encounter and applies its rewards or consequences.
-        private static void HandleEncounter(Encounter encounter, PlayerCharacter player, List<Quest> quests)
+        private static void HandleEncounter(Encounter encounter, PlayerCharacter player, List<Quest> quests, WeatherCondition weather)
         {
             Console.Clear();
             Console.WriteLine($"=== Encounter: {encounter.Name} ===");
             Console.WriteLine(encounter.Description);
+            Console.WriteLine($"Weather: {weather.Name} - {weather.Description}");
             Console.WriteLine();
 
             switch (encounter.Type)
             {
                 case EncounterType.Combat:
-                    if (encounter.Enemy != null && CombatSystem.Fight(player, encounter.Enemy))
+                    if (encounter.Enemy != null && CombatSystem.Fight(player, encounter.Enemy, weather))
                     {
                         RecordQuestProgress(quests);
                     }
@@ -193,7 +204,7 @@ namespace NewWorldPP2.UI
                             }
                             break;
                         case "2":
-                            if (encounter.Enemy != null && CombatSystem.Fight(player, encounter.Enemy))
+                            if (encounter.Enemy != null && CombatSystem.Fight(player, encounter.Enemy, weather))
                             {
                                 RecordQuestProgress(quests);
                             }

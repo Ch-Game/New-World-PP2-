@@ -8,7 +8,7 @@ namespace NewWorldPP2.Services
     public static class DungeonSystem
     {
         // Runs the selected dungeon or gauntlet until completion or retreat.
-        public static void Run(PlayerCharacter player, WorldLocation location)
+        public static void Run(PlayerCharacter player, WorldLocation location, WeatherCondition? weather = null)
         {
             var isGauntlet = location.Type == LocationType.Gauntlet;
             var stageCount = isGauntlet ? 5 : 3;
@@ -32,7 +32,7 @@ namespace NewWorldPP2.Services
                 Console.WriteLine("Press Enter to fight...");
                 Console.ReadLine();
 
-                if (!CombatSystem.Fight(player, enemy))
+                if (!CombatSystem.Fight(player, enemy, weather))
                 {
                     if (player.Health > 0)
                     {

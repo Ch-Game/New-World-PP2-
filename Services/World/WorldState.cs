@@ -10,6 +10,9 @@ namespace NewWorldPP2.Services.World
 
         // Identifies the location currently occupied by the player.
         public string CurrentLocationId { get; set; } = "silvermere-tavern";
+
+        // Stores the weather condition so it survives save and load operations.
+        public string CurrentWeather { get; set; } = "Clear";
     }
 
 }
